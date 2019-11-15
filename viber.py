@@ -1,4 +1,5 @@
 import os
+import datetime
 from viberbot import Api
 from viberbot.api.bot_configuration import BotConfiguration
 from viberbot.api.messages import VideoMessage
@@ -21,7 +22,10 @@ import json
 
 def ViberSendMessages(to, messages):
     print("stack: ViberSendMessages")
-    SaveIdSendetCommand(viber.send_messages(to, messages), to)
+    list_tokens = viber.send_messages(to, messages)
+    for message_id in list_tokens:
+        print("Сообщение отправлено: " +str(message_id))   
+    SaveIdSendetCommand(list_tokens, to)
 
 def SaveIdSendetCommand(list_tokens, sender_id):
     print("stack: SaveIdSendetCommand")
@@ -35,12 +39,15 @@ def SaveIdSendetCommand(list_tokens, sender_id):
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_undelivered_send_messages',))
         if(cur.rowcount == 0):
             # Execute a command: this creates a new table
+            print("Первый запуск. Создание таблиц data_undelivered_send_messages и data_undelivered_messages_time_stamp")
             cur.execute("CREATE TABLE data_undelivered_send_messages (id serial PRIMARY KEY, sender_id varchar(50), message_id text );")
+            cur.execute("CREATE TABLE data_undelivered_messages_time_stamp (id serial PRIMARY KEY, sender_id varchar(50), timestamp_message varchar(50) );")
         # Pass data to fill a query placeholders and let Psycopg perform
         # the correct conversion (no more SQL injections!)
         for message_id in list_tokens:
+            print("Сохраняем отпавленное сообщение " + str(message_id))
             cur.execute("INSERT INTO data_undelivered_send_messages (sender_id, message_id) VALUES (%s, %s)",
-              (sender_id, str(message_id)))
+              (sender_id, str(message_id)))              
 
        # Make the changes to the database persistent
         conn.commit()
@@ -52,7 +59,7 @@ def SaveIdSendetCommand(list_tokens, sender_id):
         conn.close()
 
 
-def ExistNotDeliveredCommands(sender_id):
+def ExistNotDeliveredCommands(sender_id, timestamp):
     print("stack: ExistNotDeliveredCommands")
     #Есть недоставленые команды, отправленные ботом пользователю
     exist_records = False
@@ -66,14 +73,42 @@ def ExistNotDeliveredCommands(sender_id):
 
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_undelivered_send_messages',))
         if(cur.rowcount == 0):
+            print("Первый вызов. Создаем таблицы data_undelivered_send_messages и data_undelivered_messages_time_stamp")
+            print("Нет отправленных сообщений вообще")
             # Execute a command: this creates a new table
             cur.execute("CREATE TABLE data_undelivered_send_messages (id serial PRIMARY KEY, sender_id varchar(50), message_id text );")
+            cur.execute("CREATE TABLE data_undelivered_messages_time_stamp (id serial PRIMARY KEY, sender_id varchar(50), timestamp_message varchar(50) );")
             need_query = False
 
-        if need_query:
-            cur.execute("select * from data_undelivered_send_messages where sender_id=%s", (sender_id,))
+        if need_query:                
+            print("Таблицы data_undelivered_send_messages и data_undelivered_messages_time_stamp созданы ранее")
+            cur.execute("SELECT * from data_undelivered_send_messages where sender_id=%s", (sender_id,))
             if(cur.rowcount > 0):
-                exist_records = True
+                print("Есть недоставленные сообщения у пользователя " + sender_id)
+                exist_records = True                
+            else:
+                print("Нет недоставленных сообщений у пользователя " + sender_id)
+                print("Проверяем, что дата нового сообщения больше даты последнего доставленного у пользователя " + sender_id)
+                cur.execute("SELECT  timestamp_message from data_undelivered_messages_time_stamp where sender_id=%s", (sender_id,))
+                if cur.rowcount > 0:
+                    result_query = cur.fetchone()                    
+                    try:                        
+                        if timestamp <= int(result_query[0]):
+                            exist_records = True
+                            print("Время нового сообщения меньше времени последнего доставленного ")
+                            print("Время нового сообщения: " + str(timestamp))
+                            print("Время последнего доставленного сообщения: " + str(result_query[0]))
+                        else:
+                            print("Время нового сообщения больше времени последнего доставленного")
+                            print("Время нового сообщения: " + str(timestamp))
+                            print("Время последнего доставленного сообщения: " + str(result_query[0]))
+                    except Exception as e:
+                       print("Error on get timestamp message from postgress " + e.args[0])
+                else:
+                    print("Нет данных о времени доставки последнего сообщения")
+                    
+                
+                    
        # Make the changes to the database persistent
         conn.commit()
         # Close communication with the database
@@ -103,6 +138,7 @@ def onFailedDeliveredMessage(message_id, sender_id):
         if(cur.rowcount == 0):
             # Execute a command: this creates a new table
             cur.execute("CREATE TABLE data_undelivered_send_messages (id serial PRIMARY KEY, sender_id varchar(50), message_id text );")
+            cur.execute("CREATE TABLE data_undelivered_messages_time_stamp (id serial PRIMARY KEY, sender_id varchar(50), timestamp_message varchar(50) );")
             need_drop = False
 
         if need_drop:
@@ -119,7 +155,7 @@ def onFailedDeliveredMessage(message_id, sender_id):
 
 
 
-def onDeliveredMessage(message_id, sender_id):
+def onDeliveredMessage(message_id, sender_id, timestamp_message):
     print("stack: onDeliveredMessage")
     #доставка команды пользователю - надо удалить из списка сохраненных команд
     # эту команду
@@ -132,13 +168,36 @@ def onDeliveredMessage(message_id, sender_id):
         need_drop = True
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_undelivered_send_messages',))
         if(cur.rowcount == 0):
+            print("Первый запуск. Создание таблиц data_undelivered_send_messages и data_undelivered_messages_time_stamp")
             # Execute a command: this creates a new table
             cur.execute("CREATE TABLE data_undelivered_send_messages (id serial PRIMARY KEY, sender_id varchar(50), message_id text );")
+            cur.execute("CREATE TABLE data_undelivered_messages_time_stamp (id serial PRIMARY KEY, sender_id varchar(50), timestamp_message varchar(50) );")
+            print("Не нужно ничего очищать, потому что данных для очистки еще нет")
             need_drop = False
 
         if need_drop:
+            cur.execute("SELECT sender_id, timestamp_message FROM data_undelivered_messages_time_stamp WHERE sender_id = %s FOR UPDATE" , (sender_id,))            
+            if(cur.rowcount == 0):
+                print("Нет данных о пользователе " + sender_id)
+                cur.execute("LOCK TABLE data_undelivered_messages_time_stamp IN SHARE ROW EXCLUSIVE MODE")
+                cur.execute("SELECT sender_id, timestamp_message FROM data_undelivered_messages_time_stamp WHERE sender_id = %s FOR UPDATE" , (sender_id,))
+                if cur.rowcount == 0:
+                    print("Созданим запись с данными о пользователе " + sender_id + " в таблице времени последнего доставленного data_undelivered_messages_time_stamp")
+                    cur.execute("INSERT INTO data_undelivered_messages_time_stamp (timestamp_message, sender_id) VALUES (%s, %s)", ( str(timestamp_message), sender_id));
+                else:
+                    print("Есть данных о пользователе " + sender_id)
+                    print("Параллельная транзакция добавила данные о пользователе " + sender_id)
+                    print("Обновим дату доставки последнего сообщения " + sender_id)
+                    print("Дата доставки : " + str(timestamp_message) + " у пользователя " + sender_id)
+                    cur.execute("UPDATE data_undelivered_messages_time_stamp SET  timestamp_message = %s WHERE sender_id = %s", ( str(timestamp_message), sender_id));
+            else:                
+                print("Есть данных о пользователе " + sender_id)
+                print("Обновим дату доставки последнего сообщения " + sender_id)
+                print("Дата доставки : " + str(timestamp_message) + " у пользователя " + sender_id)
+                cur.execute("UPDATE data_undelivered_messages_time_stamp SET  timestamp_message = %s WHERE sender_id = %s", ( str(timestamp_message), sender_id))
+            print("Удалим информацию об отправленном сообщении у пользвателя " + sender_id + ". Сообшение с токеном " + str(message_id))
             cur.execute("DELETE FROM data_undelivered_send_messages WHERE sender_id = %s and message_id = %s", (sender_id, str(message_id)));
-
+            
        # Make the changes to the database persistent
         conn.commit()
         # Close communication with the database
@@ -2227,26 +2286,22 @@ def SetFlagStopQuery(sender_id):
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_flags_user',))
         need_stop_check = False
         if(cur.rowcount == 0):
+            print("Первый запуск. Создание таблицы data_flags_user")
             # Execute a command: this creates a new table
             cur.execute("CREATE TABLE data_flags_user (id serial PRIMARY KEY, sender_id varchar(50), flag_id varchar(36) );")
             need_stop_check = True
 
         if need_stop_check:
+            print("Первый запуск. Не нужно ничего очищать")
             conn.commit()
             return True
-        else:
-            cur.execute("SELECT sender_id, flag_id FROM data_flags_user WHERE sender_id = %s", (sender_id,))
-            if cur.rowcount > 0:
-                result_query = cur.fetchone()
-                if result_query[1] == "1": #Удалим флаг
-                    cur.execute("DELETE FROM data_flags_user WHERE sender_id = %s", (sender_id,));
-                    conn.commit()
-                    return True
-                else:
-                    cur.execute("DELETE FROM data_flags_user WHERE sender_id = %s", (sender_id,));
-                    conn.commit()
-                    return True
+        else:            
+            cur.execute("SELECT sender_id, flag_id FROM data_flags_user WHERE sender_id = %s FOR UPDATE", (sender_id,))
+            if cur.rowcount > 0:                                
+                print("Есть данные о текущем пользователе. Снимем блокировку")
+                cur.execute("UPDATE data_flags_user SET flag_id = %s WHERE sender_id = %s", ("0",sender_id));                
             else:
+                print("Нет данных о текущем пользователе. Нет блокировок для снятия.")
                 conn.commit()
                 return True
 
@@ -2261,7 +2316,40 @@ def SetFlagStopQuery(sender_id):
         cur.close()
         conn.close()
 
-def SetFlagStartQuery(sender_id):
+def CreateCurrentUserRecord(sender_id, cur):
+    print("Создание записи о пользователе " + sender_id + " в таблице data_flags_user")
+    #Заблокируем таблицу
+    cur.execute("LOCK TABLE data_flags_user IN SHARE ROW EXCLUSIVE MODE")
+    cur.execute("SELECT sender_id, flag_id FROM data_flags_user WHERE sender_id = %s FOR UPDATE", (sender_id,))
+    #Вставим строку текущего пользователя
+    if cur.rowcount == 0:				
+        cur.execute("INSERT INTO data_flags_user (sender_id, flag_id) VALUES (%s, %s)",(sender_id, "1"))		
+        print("Запись создана")
+        return True
+    else:
+        print("Запись НЕ создана. Создана ранее другой транзакцией")
+        return False
+
+def SetFlagId(sender_id, flag_id, cur):
+    result_query = cur.fetchone()
+    if result_query[1] == "1": #Запрос задан - мы просто ждем		
+        print("Работа пользователя заблокирована ранее. Ничего не делаем: " + sender_id)
+        return False
+    else: # удалим строку и вскинем флаг и вернем True
+        cur.execute("UPDATE data_flags_user SET flag_id = %s WHERE sender_id = %s", (flag_id, sender_id));		
+        print("Устанавливаем флаг блокировки работы пользователя " + sender_id)
+        return True                    
+		
+def SetFlagIdNeed(not_need, sender_id, flag_id, cur ):
+    if not_need:
+        state = False
+        print("Не нужно пытаться установить блокировку")
+    else:    
+        print("Попытаемся установить блокировку")
+        state = SetFlagId(sender_id, flag_id, cur)
+    return state
+        
+def SetFlagStartQuery(sender_id, timestamp_message):
     print("stack: SetFlagStartQuery")
     try:
         DATABASE_URL = os.environ['DATABASE_URL']
@@ -2270,35 +2358,36 @@ def SetFlagStartQuery(sender_id):
         # Open a cursor to perform database operations
         cur = conn.cursor()
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_flags_user',))
-        need_stop_check = True
+        any_blocks_exist = True
         if(cur.rowcount == 0):
             # Execute a command: this creates a new table
             cur.execute("CREATE TABLE data_flags_user (id serial PRIMARY KEY, sender_id varchar(50), flag_id varchar(36) );")
-            need_stop_check = False
-
-        need_new_string = False
-        if need_stop_check:
-            cur.execute("SELECT sender_id, flag_id FROM data_flags_user WHERE sender_id = %s", (sender_id,))
-            if cur.rowcount > 0:
-                result_query = cur.fetchone()
-                if result_query[1] == "1": #Запрос задан - мы просто ждем
-                    conn.commit()
-                    return False
-                else: # удалим строку и вскинем флаг и вернем True
-                    cur.execute("DELETE FROM data_flags_user WHERE sender_id = %s", (sender_id,));
-                    need_new_string = True
-            else: #вскинем флаг и вернем True
-                need_new_string = True
-        else: #вскинем флаг и вернем True
-            need_new_string = True
-        if need_new_string == True:
-            # Pass data to fill a query placeholders and let Psycopg perform
-            # the correct conversion (no more SQL injections!)
-            cur.execute("INSERT INTO data_flags_user (sender_id, flag_id) VALUES (%s, %s)",
-                (sender_id, "1"))
+            any_blocks_exist = False
+        state = False
+        flag_id = "1"
+        if any_blocks_exist:			
+            print("Таблица data_flags_user создана ранее")
+            cur.execute("SELECT sender_id, flag_id FROM data_flags_user WHERE sender_id = %s FOR UPDATE", (sender_id,))           
+            if cur.rowcount > 0:	
+                print("Есть запись с пользователем " + sender_id)
+                state = SetFlagIdNeed(ExistNotDeliveredCommands(sender_id, timestamp_message),  sender_id, flag_id, cur )                
+            else: 
+                print("Нет записи с пользователем " + sender_id)
+                if CreateCurrentUserRecord(sender_id, cur) :
+                    state = True
+                else:
+                    state = SetFlagIdNeed(ExistNotDeliveredCommands(sender_id, timestamp_message),  sender_id, flag_id, cur )                                    
+        else:
+            print("Первый вызов - создание таблицы data_flags_user")
+            if CreateCurrentUserRecord(sender_id, cur) :			
+                state = True
+            else:	
+                cur.execute("SELECT FOR UPDATE sender_id, flag_id FROM data_flags_user WHERE sender_id = %s", (sender_id,))            
+                state = SetFlagIdNeed(ExistNotDeliveredCommands(sender_id, timestamp_message),  sender_id, flag_id, cur )                                    
+		
        # Make the changes to the database persistent
         conn.commit()
-        return True
+        return state
         # Close communication with the database
     except Exception as e:
         print("Error on SetFlagStartQuery:" + e.args[0])
@@ -2307,50 +2396,7 @@ def SetFlagStartQuery(sender_id):
         cur.close()
         conn.close()
 
-def GetFlagStopQuery(sender_id):
-    print("stack: GetFlagStopQuery")
-    try:
-        DATABASE_URL = os.environ['DATABASE_URL']
-        # Connect to an existing database
-        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-        # Open a cursor to perform database operations
-        cur = conn.cursor()
-        cur.execute("select * from information_schema.tables where table_name=%s", ('data_flags_user',))
-        need_stop_check = False
-        if(cur.rowcount == 0):
-            # Execute a command: this creates a new table
-            cur.execute("CREATE TABLE data_flags_user (id serial PRIMARY KEY, sender_id varchar(50), flag_id varchar(36) );")
-            need_stop_check = True
 
-
-        if need_stop_check:
-            conn.commit()
-            return False
-        else:
-            cur.execute("SELECT sender_id, flag_id FROM data_flags_user WHERE sender_id = %s", (sender_id,))
-            if cur.rowcount > 0:
-                result_query = cur.fetchone()
-                if result_query[1] == "1": #Запрос задан - мы просто ждем
-                    conn.commit()
-                    return True
-                else:
-                    cur.execute("DELETE FROM data_flags_user WHERE sender_id = %s", (sender_id,));
-                    conn.commit()
-                    return False
-            else:
-                conn.commit()
-                return False
-
-       # Make the changes to the database persistent
-        conn.commit()
-        return False
-        # Close communication with the database
-    except Exception as e:
-        print("Error on GetFlagStopQuery:" + e.args[0])
-        return False
-    finally:
-        cur.close()
-        conn.close()
 
 def RequestItilium(dict_data):
     print("stack: RequestItilium")
@@ -2475,6 +2521,58 @@ viber = Api(BotConfiguration(
     auth_token=auth_token_out
 ))
 
+
+        
+@app.route('/clearBlocks',  methods=['GET'])
+def IncomingGetClear():
+    print("stack: IncomingGetClear")
+    key = request.args.get("key")
+    if(not key == os.environ['CLEAR_KEY']):
+        return  "Неправильный ключ. Используйте запрос вида https://servername/clearBlocks?key=your_key_from_admin_panel"
+    
+    try:
+        text = ""
+        DATABASE_URL = os.environ['DATABASE_URL']
+        # Connect to an existing database
+        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+        # Open a cursor to perform database operations
+        cur = conn.cursor()
+        cur.execute("select * from information_schema.tables where table_name=%s", ('data_flags_user',))        
+        if(cur.rowcount == 0):
+            print("Нет таблицы data_flags_user. Ее не очищаем")        
+            text += "Нет таблицы data_flags_user. Ее не очищаем\n"
+        else:                        
+            cur.execute("TRUNCATE data_flags_user");
+            text += "Таблица data_flags_user Очищена\n"
+            
+        cur.execute("select * from information_schema.tables where table_name=%s", ('data_undelivered_send_messages',))        
+        if(cur.rowcount == 0):
+            print("Нет таблицы data_undelivered_send_messages. Ее не очищаем")        
+            text += "Нет таблицы data_undelivered_send_messages. Ее не очищаем\n"
+        else:                        
+            cur.execute("TRUNCATE data_undelivered_send_messages");
+            text += "Таблица data_undelivered_send_messages Очищена\n"
+            
+        cur.execute("select * from information_schema.tables where table_name=%s", ('data_undelivered_messages_time_stamp',))        
+        if(cur.rowcount == 0):
+            print("Нет таблицы data_undelivered_messages_time_stamp. Ее не очищаем")        
+            text += "Нет таблицы data_undelivered_messages_time_stamp. Ее не очищаем<br>"
+        else:                        
+            cur.execute("TRUNCATE data_undelivered_messages_time_stamp");
+            text += "Таблица data_undelivered_messages_time_stamp Очищена<br>"
+
+       # Make the changes to the database persistent
+        conn.commit()
+        return text
+        # Close communication with the database
+    except Exception as e:
+        print("Error on SetFlagStopQuery:" + e.args[0])
+        text += "Error on SetFlagStopQuery:" + e.args[0]
+        return text
+    finally:
+        cur.close()
+        conn.close()
+
 @app.route('/',  methods=['GET'])
 def IncomingGet():
     state, need_hook, error = SetHooksIfNeed()
@@ -2493,35 +2591,32 @@ def incoming():
     viber_request = viber.parse_request(request.get_data())
 
     if isinstance(viber_request, ViberMessageRequest):
+        print("Новое сообщение от пользователя " + str(viber_request.timestamp) + " " + str(viber_request.message))
+        print("viber_request.timestamp:" + str(viber_request.timestamp))        
         sender_id = viber_request.sender.id
         message = viber_request.message
-        if ExistNotDeliveredCommands(sender_id):
-            print("Есть недоставленные сообщения от бота для пользователя. Не обрабатываем")
-            return Response(status=200)
-        if GetFlagStopQuery(sender_id) == True:
-            print("Повторный запрос")
-            return Response(status=200)
+        
+        if SetFlagStartQuery(sender_id, viber_request.timestamp):
+            try:
+                is_registered_user = GetIsRegisteredUser(sender_id)
+                GoToCurrentState(sender_id, message, is_registered_user)
+            except Exception as e:
+                print ("Error:"+ e.args[0]) 
+            finally:
+                SetFlagStopQuery(sender_id)
         else:
-            if SetFlagStartQuery(sender_id) == True:
-                try:
-                    is_registered_user = GetIsRegisteredUser(sender_id)
-                    GoToCurrentState(sender_id, message, is_registered_user)
-                except Exception as e:
-                    print ("Error:"+ e.args[0])
-                finally:
-                    SetFlagStopQuery(sender_id)
-            else:
-                print("Повторный запрос")
-                return Response(status=200)
-
+            print("Ничего не делаем. Причина выше в логах")
+            return Response(status=200)                
+        
     elif isinstance(viber_request, ViberSubscribedRequest):
         ViberSendMessages(viber_request.sender.id, TextMessage(text="Вы зарегистрированы"))
     elif isinstance(viber_request, ViberFailedRequest):
         onFailedDeliveredMessage(viber_request._message_token, viber_request._user_id)
         print("НЕ Доставлено " + str(viber_request._message_token))
     elif isinstance(viber_request, ViberDeliveredRequest):
-        onDeliveredMessage(viber_request._message_token, viber_request._user_id)
+        onDeliveredMessage(viber_request._message_token, viber_request._user_id, viber_request.timestamp)
         print("Доставлено " + str(viber_request._message_token))
+        print("Доставлено viber_request.timestamp:" + str(viber_request.timestamp))        
     elif isinstance(viber_request, ViberConversationStartedRequest) :
         ViberSendMessages(viber_request.sender.id, [TextMessage(text="Добрый день. Вы подписались на бота Итилиум")])
 
