@@ -93,7 +93,7 @@ def ExistNotDeliveredCommands(sender_id, timestamp):
                 if cur.rowcount > 0:
                     result_query = cur.fetchone()                    
                     try:                        
-                        if timestamp <= int(result_query[0]):
+                        if timestamp-800 <= int(result_query[0]):
                             exist_records = True
                             print("Время нового сообщения меньше времени последнего доставленного ")
                             print("Время нового сообщения: " + str(timestamp))
