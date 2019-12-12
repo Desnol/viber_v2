@@ -938,7 +938,7 @@ def proc29615d836647459dac36095a2b7287cc(sender_id, message, data, service_data_
     if not isinstance(data, dict):
         data = {}
     result_programm_select = proc_function29615d836647459dac36095a2b7287cc(sender_id, message, data, service_data_bot_need, carousel_id)
-    if result_programm_select == ""1"":
+    if result_programm_select == "1":
         proc2ad315bd42ff45b885aecdc9d04c0a9e(sender_id, message, data, service_data_bot_need, carousel_id) #Отмена
     return
 
