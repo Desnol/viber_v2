@@ -630,6 +630,8 @@ def proc91d863c10ff0456bacb086818cac8a03(sender_id, message, data, service_data_
         proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id) #Выбор действия
     elif result_programm_select == "confirm_incidents_carousel":
         proc1252095275704b2a907cb2e089e0ed77(sender_id, message, data, service_data_bot_need, carousel_id) #Карусель внести уточнения
+    elif result_programm_select == "comand_to_selected_incident":
+        proc4cca60de6e5643a0a27b251f132fafac(sender_id, message, data, service_data_bot_need, carousel_id) #Команды для выбранного инцидента для уточнения
     return
 
 def proc_function91d863c10ff0456bacb086818cac8a03(sender_id, message, data, service_data_bot_need, carousel_id):
@@ -823,7 +825,6 @@ def proc_functionbb53668eeb8e4153bdf7a72781739830(sender_id, text, data, carouse
     #Ввести уточнение (функция обработки выбора с клавиатуры)
     print("stack: proc_functionbb53668eeb8e4153bdf7a72781739830")
     is_error, text, state = RequestItilium({"data": {"action": "is_add_converstaion","incident" : carousel_id,"text":text,"sender": sender_id}})
-    
     if is_error:
         text_error = text
         ViberSendMessages(sender_id, TextMessage(text="Ошибка:" + text_error))
