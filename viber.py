@@ -652,7 +652,6 @@ def proc_function91d863c10ff0456bacb086818cac8a03(sender_id, message, data, serv
                 ViberSendMessages(sender_id, TextMessage(text=list[0].get('detail_view')))
                 carousel_id = list[0].get('id')
 		#ОТЛАДЧИК
-		print(str(carousel_id));
                 return "comand_to_selected_incident"
             else:
                 list_ret = []
