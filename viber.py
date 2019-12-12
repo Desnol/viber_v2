@@ -2409,7 +2409,7 @@ def SetFlagStartQuery(sender_id, timestamp_message):
         return True
     finally:
         cur.close()
-     conn.close()
+        conn.close()
 
 def RequestItilium(dict_data):
     print("stack: RequestItilium")
