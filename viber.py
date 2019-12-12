@@ -647,8 +647,8 @@ def proc_function91d863c10ff0456bacb086818cac8a03(sender_id, message, data, serv
             list = json.loads(text)
             if len(list) == 0:
                 ViberSendMessages(sender_id, TextMessage(text="У вас нет зарегистрированных открытых обращений"))
-                return "OK"  
-            elif len(list) == 0:
+                return "OK"
+            elif len(list) == 1:
                 ViberSendMessages(sender_id, TextMessage(text=list[0].get('detail_view')))
                 carousel_id = list[0].get('id')
                 return "comand_to_selected_incident"
@@ -871,6 +871,66 @@ def proce022f99d4b914e8a8469546d143ff4e5(sender_id, message, data, service_data_
         data = {}
     ViberSendMessages(sender_id, TextMessage(text="Уточнения внесены"))
     proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id) #Переход на Выбор действия
+    return
+
+def proc4cca60de6e5643a0a27b251f132fafac(sender_id, message, data, service_data_bot_need, carousel_id):
+    #Команды для выбранного инцидента для уточнения (выбор из подчиненных команд)
+    print("stack: proc4cca60de6e5643a0a27b251f132fafac")
+    if GetIdStateForClearData() == "4cca60de-6e56-43a0-a27b-251f132fafac":
+        service_data_bot_need = {}
+        carousel_id = ''
+        data = {}
+    if not SaveState(sender_id, "4cca60de-6e56-43a0-a27b-251f132fafac", service_data_bot_need, data, carousel_id): #proc4cca60de6e5643a0a27b251f132fafac
+        ViberSendMessages(sender_id, TextMessage(text="ERROR SAVE STATE"))
+        GoToStateError(sender_id, message, GetIdErrorState(), {}, {}, "")
+        return
+    buttons = []
+    buttons.append({
+        "Columns": 6,
+        "Rows": 1,
+        "ActionBody": "971494b8-473d-4fbe-94c6-86b320392d3a",
+        "Text": "Введите уточнение" })
+    buttons.append({
+        "Columns": 6,
+        "Rows": 1,
+        "ActionBody": "29615d83-6647-459d-ac36-095a2b7287cc",
+        "Text": "Отмена" })
+    ViberSendMessages(sender_id, KeyboardMessage(min_api_version=4, keyboard={"InputFieldState": "hidden", "Type": "keyboard", "Buttons": buttons}))
+    if not SaveState(sender_id, "cca60de-6e56-43a0-a27b-251f132fafac4", service_data_bot_need, data, carousel_id): #proc_expect_user_button_click4cca60de6e5643a0a27b251f132fafac
+        ViberSendMessages(sender_id, TextMessage(text="ERROR SAVE STATE"))
+        GoToStateError(sender_id, message, GetIdErrorState(), {}, {}, "")
+        return
+    return
+
+def proc_expect_user_button_click4cca60de6e5643a0a27b251f132fafac(sender_id, message, data, service_data_bot_need, carousel_id):
+    #Команды для выбранного инцидента для уточнения (Обработчик выбора из подчиненных команд)
+    print("stack: proc_expect_user_button_click4cca60de6e5643a0a27b251f132fafac")
+    command = GetTextCommand(message)
+    if command == "971494b8-473d-4fbe-94c6-86b320392d3a":
+        proc971494b8473d4fbe94c686b320392d3a(sender_id, message, data, service_data_bot_need, carousel_id) #Введите уточнение
+    elif command == "29615d83-6647-459d-ac36-095a2b7287cc":
+        proc29615d836647459dac36095a2b7287cc(sender_id, message, data, service_data_bot_need, carousel_id) #Отмена
+    else: 
+        proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id) #Выбор действия
+
+def proc971494b8473d4fbe94c686b320392d3a(sender_id, message, data, service_data_bot_need, carousel_id):
+    #Введите уточнение
+    print("stack: proc971494b8473d4fbe94c686b320392d3a")
+    if GetIdStateForClearData() == "971494b8-473d-4fbe-94c6-86b320392d3a":
+        service_data_bot_need = {}
+        carousel_id = ''
+        data = {}
+    procbb53668eeb8e4153bdf7a72781739830(sender_id, message, data, service_data_bot_need, carousel_id) #Переход на Введите уточнение
+    return
+
+def proc29615d836647459dac36095a2b7287cc(sender_id, message, data, service_data_bot_need, carousel_id):
+    #Отмена
+    print("stack: proc29615d836647459dac36095a2b7287cc")
+    if GetIdStateForClearData() == "29615d83-6647-459d-ac36-095a2b7287cc":
+        service_data_bot_need = {}
+        carousel_id = ''
+        data = {}
+    proc2ad315bd42ff45b885aecdc9d04c0a9e(sender_id, message, data, service_data_bot_need, carousel_id) #Переход на Отмена
     return
 
 def proc5160f46d71b8466a8b28db1bf17d5392(sender_id, message, data, service_data_bot_need, carousel_id):
@@ -2149,6 +2209,10 @@ list_procs.update( { 'b53668e-eb8e-4153-bdf7-a72781739830b': proc_function_expec
 list_procs.update( { '2ad315bd-42ff-45b8-85ae-cdc9d04c0a9e': proc2ad315bd42ff45b885aecdc9d04c0a9e,'2ad315bd-42ff-45b8-85ae-cdc9d04c0a9ewithout_registration': False} )
 list_procs.update( { 'a0981bcc-c8ee-486e-9432-57b9de36f2d1': proca0981bccc8ee486e943257b9de36f2d1,'a0981bcc-c8ee-486e-9432-57b9de36f2d1without_registration': False} )
 list_procs.update( { 'e022f99d-4b91-4e8a-8469-546d143ff4e5': proce022f99d4b914e8a8469546d143ff4e5,'e022f99d-4b91-4e8a-8469-546d143ff4e5without_registration': False} )
+list_procs.update( { '4cca60de-6e56-43a0-a27b-251f132fafac': proc4cca60de6e5643a0a27b251f132fafac,'4cca60de-6e56-43a0-a27b-251f132fafacwithout_registration': False} )
+list_procs.update( { 'cca60de-6e56-43a0-a27b-251f132fafac4': proc_expect_user_button_click4cca60de6e5643a0a27b251f132fafac,'cca60de-6e56-43a0-a27b-251f132fafac4without_registration': False} )
+list_procs.update( { '971494b8-473d-4fbe-94c6-86b320392d3a': proc971494b8473d4fbe94c686b320392d3a,'971494b8-473d-4fbe-94c6-86b320392d3awithout_registration': False} )
+list_procs.update( { '29615d83-6647-459d-ac36-095a2b7287cc': proc29615d836647459dac36095a2b7287cc,'29615d83-6647-459d-ac36-095a2b7287ccwithout_registration': False} )
 list_procs.update( { '5160f46d-71b8-466a-8b28-db1bf17d5392': proc5160f46d71b8466a8b28db1bf17d5392,'5160f46d-71b8-466a-8b28-db1bf17d5392without_registration': False} )
 list_procs.update( { '160f46d-71b8-466a-8b28-db1bf17d53925': proc_expect_comand_user5160f46d71b8466a8b28db1bf17d5392,'160f46d-71b8-466a-8b28-db1bf17d53925without_registration': False} )
 list_procs.update( { 'dae1f364-0d8a-4eb0-aed3-fc1b63e187aa': procdae1f3640d8a4eb0aed3fc1b63e187aa,'dae1f364-0d8a-4eb0-aed3-fc1b63e187aawithout_registration': False} )
