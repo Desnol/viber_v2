@@ -621,7 +621,7 @@ def proc91d863c10ff0456bacb086818cac8a03(sender_id, message, data, service_data_
         data = {}
     if not isinstance(data, dict):
         data = {}
-    print("stack: carousel_id " + carousel_id)	
+    print("stack: start carousel_id " + carousel_id)	
     result_programm_select = proc_function91d863c10ff0456bacb086818cac8a03(sender_id, message, data, service_data_bot_need, carousel_id)
     if result_programm_select == "error_network":
         proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id) #Выбор действия
@@ -633,7 +633,7 @@ def proc91d863c10ff0456bacb086818cac8a03(sender_id, message, data, service_data_
         proc1252095275704b2a907cb2e089e0ed77(sender_id, message, data, service_data_bot_need, carousel_id) #Карусель внести уточнения
     elif result_programm_select == "comand_to_selected_incident":
         proc4cca60de6e5643a0a27b251f132fafac(sender_id, message, data, service_data_bot_need, carousel_id) #Команды для выбранного инцидента для уточнения
-    print("stack: carousel_id " + carousel_id)
+    print("stack: end carousel_id " + carousel_id)
     return
 
 def proc_function91d863c10ff0456bacb086818cac8a03(sender_id, message, data, service_data_bot_need, carousel_id):
@@ -653,7 +653,7 @@ def proc_function91d863c10ff0456bacb086818cac8a03(sender_id, message, data, serv
             elif len(list) == 1:
                 ViberSendMessages(sender_id, TextMessage(text=list[0].get('detail_view')))
                 carousel_id = list[0].get('id')
-                print("stack: carousel_id " + carousel_id)
+                print("stack: into carousel_id " + carousel_id)
                 return "comand_to_selected_incident"
             else:
                 list_ret = []
