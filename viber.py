@@ -822,11 +822,7 @@ def proc_function_expect_userbb53668eeb8e4153bdf7a72781739830(sender_id, message
 def proc_functionbb53668eeb8e4153bdf7a72781739830(sender_id, text, data, carousel_id):
     #Ввести уточнение (функция обработки выбора с клавиатуры)
     print("stack: proc_functionbb53668eeb8e4153bdf7a72781739830")
-    id_incident = data.get('id_incident', -1)
-    if  id_incident == -1:
-        id_incident = carousel_id
-    data.pop('id_incident', 1)
-    is_error, text, state = RequestItilium({"data": {"action": "is_add_converstaion","incident" : id_incident,"text":text,"sender": sender_id}})
+    is_error, text, state = RequestItilium({"data": {"action": "is_add_converstaion","incident" : carousel_id,"text":text,"sender": sender_id}})
     
     if is_error:
         text_error = text
