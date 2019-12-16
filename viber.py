@@ -24,12 +24,9 @@ import json
 
 def ViberSendMessages(to, messages):
     print("thread:" + GetCurrentThread() + " stack: ViberSendMessages")
-    list_tokens = viber.send_messages(to, messages)
-    for message_id in list_tokens:
-        print("thread:" + GetCurrentThread() + " Сообщение отправлено: " +str(message_id))
-    SaveIdSendetCommand(list_tokens, to)
+    SaveIdSendetCommand(messages, to)
 
-def SaveIdSendetCommand(list_tokens, sender_id):
+def SaveIdSendetCommand(messages, sender_id):
     print("thread:" + GetCurrentThread() + " stack: SaveIdSendetCommand")
     #Сохранить в базу отправленные команды
     try:
@@ -44,6 +41,13 @@ def SaveIdSendetCommand(list_tokens, sender_id):
             print("thread:" + GetCurrentThread() + " Первый запуск. Создание таблиц data_undelivered_send_messages и data_undelivered_messages_time_stamp")
             cur.execute("CREATE TABLE data_undelivered_send_messages (id serial PRIMARY KEY, sender_id varchar(50), message_id text );")
             cur.execute("CREATE TABLE data_undelivered_messages_time_stamp (id serial PRIMARY KEY, sender_id varchar(50), timestamp_message varchar(50) );")
+        print("thread:" + GetCurrentThread() + " Блокируем таблицу data_undelivered_messages_time_stamp по пользователю: " +str(sender_id))
+        cur.execute("SELECT sender_id, timestamp_message FROM data_undelivered_messages_time_stamp WHERE sender_id = %s FOR UPDATE" , (sender_id,))
+        print("thread:" + GetCurrentThread() + " заблокировали таблицу data_undelivered_messages_time_stamp по пользователю: " +str(sender_id))
+        list_tokens = viber.send_messages(sender_id, messages)
+        for message_id in list_tokens:
+            print("thread:" + GetCurrentThread() + " Сообщение отправлено: " +str(message_id))
+
         # Pass data to fill a query placeholders and let Psycopg perform
         # the correct conversion (no more SQL injections!)
         for message_id in list_tokens:
@@ -55,7 +59,7 @@ def SaveIdSendetCommand(list_tokens, sender_id):
         conn.commit()
         # Close communication with the database
     except Exception as e:
-        print("thread:" + GetCurrentThread() + " Error on SaveIdSendetCommand" + e.args[0])
+        print("thread:" + GetCurrentThread() + " Error on SaveIdSendetCommand " + e.args[0])
     finally:
         cur.close()
         conn.close()
@@ -144,7 +148,10 @@ def onFailedDeliveredMessage(message_id, sender_id):
             need_drop = False
 
         if need_drop:
-            cur.execute("DELETE FROM data_undelivered_send_messages WHERE sender_id = %s", (sender_id, ))
+            print("thread:" + GetCurrentThread() + " блокируем таблицу data_undelivered_messages_time_stamp по пользователю: " +str(sender_id))
+            cur.execute("SELECT sender_id, timestamp_message FROM data_undelivered_messages_time_stamp WHERE sender_id = %s FOR UPDATE" , (sender_id,))
+            print("thread:" + GetCurrentThread() + " заблокировали таблицу data_undelivered_messages_time_stamp по пользователю: " +str(sender_id))
+            cur.execute("DELETE FROM data_undelivered_send_messages WHERE sender_id = %s and message_id = %s", (sender_id, str(message_id) ))
 
        # Make the changes to the database persistent
         conn.commit()
@@ -178,7 +185,9 @@ def onDeliveredMessage(message_id, sender_id, timestamp_message):
             need_drop = False
 
         if need_drop:
+            print("thread:" + GetCurrentThread() + " блокируем таблицу data_undelivered_messages_time_stamp по пользователю: " +str(sender_id))
             cur.execute("SELECT sender_id, timestamp_message FROM data_undelivered_messages_time_stamp WHERE sender_id = %s FOR UPDATE" , (sender_id,))
+            print("thread:" + GetCurrentThread() + " заблокировали таблицу data_undelivered_messages_time_stamp по пользователю: " +str(sender_id))
             if(cur.rowcount == 0):
                 print("thread:" + GetCurrentThread() + " Нет данных о пользователе " + sender_id)
                 cur.execute("LOCK TABLE data_undelivered_messages_time_stamp IN SHARE ROW EXCLUSIVE MODE")
@@ -659,7 +668,7 @@ def proc_function91d863c10ff0456bacb086818cac8a03(sender_id, message, data, serv
             list = json.loads(text)
             if len(list) == 0:
                 ViberSendMessages(sender_id, TextMessage(text="У вас нет зарегистрированных открытых обращений"))
-                return "OK"            
+                return "OK"
             else:
                 list_ret = []
                 list_ret_full = []
