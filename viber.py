@@ -23,11 +23,11 @@ from viberbot.api.viber_requests import ViberDeliveredRequest
 import json
 
 def ViberSendMessages(to, messages):
-    print("thread:" + GetCurrentThread() + " stack: ViberSendMessages")
+    print("thread:" + GetCurrentThread() + "stack: ViberSendMessages")
     SaveIdSendetCommand(messages, to)
 
 def SaveIdSendetCommand(messages, sender_id):
-    print("thread:" + GetCurrentThread() + " stack: SaveIdSendetCommand")
+    print("thread:" + GetCurrentThread() + "stack: SaveIdSendetCommand")
     #Сохранить в базу отправленные команды
     try:
         DATABASE_URL = os.environ['DATABASE_URL']
@@ -38,7 +38,7 @@ def SaveIdSendetCommand(messages, sender_id):
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_undelivered_send_messages',))
         if(cur.rowcount == 0):
             # Execute a command: this creates a new table
-            print("thread:" + GetCurrentThread() + " Первый запуск. Создание таблиц data_undelivered_send_messages и data_undelivered_messages_time_stamp")
+            print("thread:" + GetCurrentThread() + "Первый запуск. Создание таблиц data_undelivered_send_messages и data_undelivered_messages_time_stamp")
             cur.execute("CREATE TABLE data_undelivered_send_messages (id serial PRIMARY KEY, sender_id varchar(50), message_id text );")
             cur.execute("CREATE TABLE data_undelivered_messages_time_stamp (id serial PRIMARY KEY, sender_id varchar(50), timestamp_message varchar(50) );")
         print("thread:" + GetCurrentThread() + " Блокируем таблицу data_undelivered_messages_time_stamp по пользователю: " +str(sender_id))
@@ -51,7 +51,7 @@ def SaveIdSendetCommand(messages, sender_id):
         # Pass data to fill a query placeholders and let Psycopg perform
         # the correct conversion (no more SQL injections!)
         for message_id in list_tokens:
-            print("thread:" + GetCurrentThread() + " Сохраняем отправленное сообщение " + str(message_id))
+            print("thread:" + GetCurrentThread() + "Сохраняем отправленное сообщение " + str(message_id))
             cur.execute("INSERT INTO data_undelivered_send_messages (sender_id, message_id) VALUES (%s, %s)",
               (sender_id, str(message_id)))
 
@@ -59,14 +59,14 @@ def SaveIdSendetCommand(messages, sender_id):
         conn.commit()
         # Close communication with the database
     except Exception as e:
-        print("thread:" + GetCurrentThread() + " Error on SaveIdSendetCommand " + e.args[0])
+        print("thread:" + GetCurrentThread() + "Error on SaveIdSendetCommand" + e.args[0])
     finally:
         cur.close()
         conn.close()
 
 
 def ExistNotDeliveredCommands(sender_id, timestamp):
-    print("thread:" + GetCurrentThread() + " stack: ExistNotDeliveredCommands")
+    print("thread:" + GetCurrentThread() + "stack: ExistNotDeliveredCommands")
     #Есть недоставленые команды, отправленные ботом пользователю
     exist_records = False
     try:
@@ -79,39 +79,39 @@ def ExistNotDeliveredCommands(sender_id, timestamp):
 
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_undelivered_send_messages',))
         if(cur.rowcount == 0):
-            print("thread:" + GetCurrentThread() + " Первый вызов. Создаем таблицы data_undelivered_send_messages и data_undelivered_messages_time_stamp")
-            print("thread:" + GetCurrentThread() + " Нет отправленных сообщений вообще")
+            print("thread:" + GetCurrentThread() + "Первый вызов. Создаем таблицы data_undelivered_send_messages и data_undelivered_messages_time_stamp")
+            print("thread:" + GetCurrentThread() + "Нет отправленных сообщений вообще")
             # Execute a command: this creates a new table
             cur.execute("CREATE TABLE data_undelivered_send_messages (id serial PRIMARY KEY, sender_id varchar(50), message_id text );")
             cur.execute("CREATE TABLE data_undelivered_messages_time_stamp (id serial PRIMARY KEY, sender_id varchar(50), timestamp_message varchar(50) );")
             need_query = False
 
         if need_query:
-            print("thread:" + GetCurrentThread() + " Таблицы data_undelivered_send_messages и data_undelivered_messages_time_stamp созданы ранее")
+            print("thread:" + GetCurrentThread() + "Таблицы data_undelivered_send_messages и data_undelivered_messages_time_stamp созданы ранее")
             cur.execute("SELECT * from data_undelivered_send_messages where sender_id=%s", (sender_id,))
             if(cur.rowcount > 0):
-                print("thread:" + GetCurrentThread() + " Есть недоставленные сообщения у пользователя " + sender_id)
+                print("thread:" + GetCurrentThread() + "Есть недоставленные сообщения у пользователя " + sender_id)
                 exist_records = True
             else:
-                print("thread:" + GetCurrentThread() + " Нет недоставленных сообщений у пользователя " + sender_id)
-                print("thread:" + GetCurrentThread() + " Проверяем, что дата нового сообщения больше даты последнего доставленного у пользователя " + sender_id)
+                print("thread:" + GetCurrentThread() + "Нет недоставленных сообщений у пользователя " + sender_id)
+                print("thread:" + GetCurrentThread() + "Проверяем, что дата нового сообщения больше даты последнего доставленного у пользователя " + sender_id)
                 cur.execute("SELECT  timestamp_message from data_undelivered_messages_time_stamp where sender_id=%s", (sender_id,))
                 if cur.rowcount > 0:
                     result_query = cur.fetchone()
                     try:
                         if timestamp-800<= int(result_query[0]):
                             exist_records = True
-                            print("thread:" + GetCurrentThread() + " Время нового сообщения меньше времени последнего доставленного ")
-                            print("thread:" + GetCurrentThread() + " Время нового сообщения: " + str(timestamp))
-                            print("thread:" + GetCurrentThread() + " Время последнего доставленного сообщения: " + str(result_query[0]))
+                            print("thread:" + GetCurrentThread() + "Время нового сообщения меньше времени последнего доставленного ")
+                            print("thread:" + GetCurrentThread() + "Время нового сообщения: " + str(timestamp))
+                            print("thread:" + GetCurrentThread() + "Время последнего доставленного сообщения: " + str(result_query[0]))
                         else:
-                            print("thread:" + GetCurrentThread() + " Время нового сообщения больше времени последнего доставленного")
-                            print("thread:" + GetCurrentThread() + " Время нового сообщения: " + str(timestamp))
-                            print("thread:" + GetCurrentThread() + " Время последнего доставленного сообщения: " + str(result_query[0]))
+                            print("thread:" + GetCurrentThread() + "Время нового сообщения больше времени последнего доставленного")
+                            print("thread:" + GetCurrentThread() + "Время нового сообщения: " + str(timestamp))
+                            print("thread:" + GetCurrentThread() + "Время последнего доставленного сообщения: " + str(result_query[0]))
                     except Exception as e:
-                       print("thread:" + GetCurrentThread() + " Error on get timestamp message from postgress " + e.args[0])
+                       print("thread:" + GetCurrentThread() + "Error on get timestamp message from postgress " + e.args[0])
                 else:
-                    print("thread:" + GetCurrentThread() + " Нет данных о времени доставки последнего сообщения")
+                    print("thread:" + GetCurrentThread() + "Нет данных о времени доставки последнего сообщения")
 
 
 
@@ -119,7 +119,7 @@ def ExistNotDeliveredCommands(sender_id, timestamp):
         conn.commit()
         # Close communication with the database
     except Exception as e:
-        print("thread:" + GetCurrentThread() + " Error on ExistNotDeliveredCommands" + e.args[0])
+        print("thread:" + GetCurrentThread() + "Error on ExistNotDeliveredCommands" + e.args[0])
         return False
     finally:
         cur.close()
@@ -128,7 +128,7 @@ def ExistNotDeliveredCommands(sender_id, timestamp):
 
 
 def onFailedDeliveredMessage(message_id, sender_id):
-    print("thread:" + GetCurrentThread() + " stack: onFailedDeliveredMessage")
+    print("thread:" + GetCurrentThread() + "stack: onFailedDeliveredMessage")
     # Ошибка при доставке команды, отправленной ботом пользователю - удалим все
     # команды, сохраненные у пользователя и перейдем на состояние ошибки
     # тут надо не зациклиться, нельзя пользователю посылать в этом состоянии
@@ -153,11 +153,12 @@ def onFailedDeliveredMessage(message_id, sender_id):
             print("thread:" + GetCurrentThread() + " заблокировали таблицу data_undelivered_messages_time_stamp по пользователю: " +str(sender_id))
             cur.execute("DELETE FROM data_undelivered_send_messages WHERE sender_id = %s and message_id = %s", (sender_id, str(message_id) ))
 
-       # Make the changes to the database persistent
+
+        # Make the changes to the database persistent
         conn.commit()
         # Close communication with the database
     except Exception as e:
-        print("thread:" + GetCurrentThread() + " Error on onFailedDeliveredMessage" + e.args[0])
+        print("thread:" + GetCurrentThread() + "Error on onFailedDeliveredMessage" + e.args[0])
     finally:
         cur.close()
         conn.close()
@@ -165,7 +166,7 @@ def onFailedDeliveredMessage(message_id, sender_id):
 
 
 def onDeliveredMessage(message_id, sender_id, timestamp_message):
-    print("thread:" + GetCurrentThread() + " stack: onDeliveredMessage")
+    print("thread:" + GetCurrentThread() + "stack: onDeliveredMessage")
     #доставка команды пользователю - надо удалить из списка сохраненных команд
     # эту команду
     try:
@@ -177,11 +178,11 @@ def onDeliveredMessage(message_id, sender_id, timestamp_message):
         need_drop = True
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_undelivered_send_messages',))
         if(cur.rowcount == 0):
-            print("thread:" + GetCurrentThread() + " Первый запуск. Создание таблиц data_undelivered_send_messages и data_undelivered_messages_time_stamp")
+            print("thread:" + GetCurrentThread() + "Первый запуск. Создание таблиц data_undelivered_send_messages и data_undelivered_messages_time_stamp")
             # Execute a command: this creates a new table
             cur.execute("CREATE TABLE data_undelivered_send_messages (id serial PRIMARY KEY, sender_id varchar(50), message_id text );")
             cur.execute("CREATE TABLE data_undelivered_messages_time_stamp (id serial PRIMARY KEY, sender_id varchar(50), timestamp_message varchar(50) );")
-            print("thread:" + GetCurrentThread() + " Не нужно ничего очищать, потому что данных для очистки еще нет")
+            print("thread:" + GetCurrentThread() + "Не нужно ничего очищать, потому что данных для очистки еще нет")
             need_drop = False
 
         if need_drop:
@@ -189,31 +190,31 @@ def onDeliveredMessage(message_id, sender_id, timestamp_message):
             cur.execute("SELECT sender_id, timestamp_message FROM data_undelivered_messages_time_stamp WHERE sender_id = %s FOR UPDATE" , (sender_id,))
             print("thread:" + GetCurrentThread() + " заблокировали таблицу data_undelivered_messages_time_stamp по пользователю: " +str(sender_id))
             if(cur.rowcount == 0):
-                print("thread:" + GetCurrentThread() + " Нет данных о пользователе " + sender_id)
+                print("thread:" + GetCurrentThread() + "Нет данных о пользователе " + sender_id)
                 cur.execute("LOCK TABLE data_undelivered_messages_time_stamp IN SHARE ROW EXCLUSIVE MODE")
                 cur.execute("SELECT sender_id, timestamp_message FROM data_undelivered_messages_time_stamp WHERE sender_id = %s FOR UPDATE" , (sender_id,))
                 if cur.rowcount == 0:
-                    print("thread:" + GetCurrentThread() + " Созданим запись с данными о пользователе " + sender_id + " в таблице времени последнего доставленного data_undelivered_messages_time_stamp")
+                    print("thread:" + GetCurrentThread() + "Созданим запись с данными о пользователе " + sender_id + " в таблице времени последнего доставленного data_undelivered_messages_time_stamp")
                     cur.execute("INSERT INTO data_undelivered_messages_time_stamp (timestamp_message, sender_id) VALUES (%s, %s)", ( str(timestamp_message), sender_id));
                 else:
-                    print("thread:" + GetCurrentThread() + " Есть данных о пользователе " + sender_id)
-                    print("thread:" + GetCurrentThread() + " Параллельная транзакция добавила данные о пользователе " + sender_id)
-                    print("thread:" + GetCurrentThread() + " Обновим дату доставки последнего сообщения " + sender_id)
-                    print("thread:" + GetCurrentThread() + " Дата доставки : " + str(timestamp_message) + " у пользователя " + sender_id)
+                    print("thread:" + GetCurrentThread() + "Есть данных о пользователе " + sender_id)
+                    print("thread:" + GetCurrentThread() + "Параллельная транзакция добавила данные о пользователе " + sender_id)
+                    print("thread:" + GetCurrentThread() + "Обновим дату доставки последнего сообщения " + sender_id)
+                    print("thread:" + GetCurrentThread() + "Дата доставки : " + str(timestamp_message) + " у пользователя " + sender_id)
                     cur.execute("UPDATE data_undelivered_messages_time_stamp SET  timestamp_message = %s WHERE sender_id = %s", ( str(timestamp_message), sender_id));
             else:
-                print("thread:" + GetCurrentThread() + " Есть данных о пользователе " + sender_id)
-                print("thread:" + GetCurrentThread() + " Обновим дату доставки последнего сообщения " + sender_id)
-                print("thread:" + GetCurrentThread() + " Дата доставки : " + str(timestamp_message) + " у пользователя " + sender_id)
+                print("thread:" + GetCurrentThread() + "Есть данных о пользователе " + sender_id)
+                print("thread:" + GetCurrentThread() + "Обновим дату доставки последнего сообщения " + sender_id)
+                print("thread:" + GetCurrentThread() + "Дата доставки : " + str(timestamp_message) + " у пользователя " + sender_id)
                 cur.execute("UPDATE data_undelivered_messages_time_stamp SET  timestamp_message = %s WHERE sender_id = %s", ( str(timestamp_message), sender_id))
-            print("thread:" + GetCurrentThread() + " Удалим информацию об отправленном сообщении у пользователя " + sender_id + ". Сообшение с токеном " + str(message_id))
+            print("thread:" + GetCurrentThread() + "Удалим информацию об отправленном сообщении у пользователя " + sender_id + ". Сообшение с токеном " + str(message_id))
             cur.execute("DELETE FROM data_undelivered_send_messages WHERE sender_id = %s and message_id = %s", (sender_id, str(message_id)));
 
        # Make the changes to the database persistent
         conn.commit()
         # Close communication with the database
     except Exception as e:
-        print("thread:" + GetCurrentThread() + " Error on onDeliveredMessage " + e.args[0])
+        print("thread:" + GetCurrentThread() + "Error on onDeliveredMessage " + e.args[0])
     finally:
         cur.close()
         conn.close()
@@ -221,7 +222,7 @@ def onDeliveredMessage(message_id, sender_id, timestamp_message):
 
 
 def SaveStateToPostgress(sender_id, state_id, carousel_id, data_user, data):
-    print("thread:" + GetCurrentThread() + " stack: SaveStateToPostgress")
+    print("thread:" + GetCurrentThread() + "stack: SaveStateToPostgress")
     data_user_string = json.dumps(data_user)
     data_bot_string = json.dumps(data)
     state = True
@@ -258,7 +259,7 @@ def SaveStateToPostgress(sender_id, state_id, carousel_id, data_user, data):
     return state
 
 def RestoreStateFromPostgress(sender_id):
-    print("thread:" + GetCurrentThread() + " stack: RestoreStateFromPostgress")
+    print("thread:" + GetCurrentThread() + "stack: RestoreStateFromPostgress")
     state = False
     is_error = False
     try:
@@ -291,7 +292,7 @@ def RestoreStateFromPostgress(sender_id):
     except Exception as e:
         is_error = True
         restore_ok = False
-        print("thread:" + GetCurrentThread() + " Error on restore data:" + e.args[0])
+        print("thread:" + GetCurrentThread() + "Error on restore data:" + e.args[0])
     finally:
         cur.close()
         conn.close()
@@ -303,13 +304,12 @@ password_itilium = os.environ['PasswordItilium']
 auth_token_out = os.environ['AuthToken']
 
 current_thread = {'id': 0}
-
 def GetCurrentThread():
     return str(current_thread.get('id'))
 
 def GetTextCommand(message):
     text = ""
-    print("thread:" + GetCurrentThread() + " stack: GetTextCommand")
+    print("thread:" + GetCurrentThread() + "stack: GetTextCommand")
     if (isinstance(message, str)):
         text = message
     elif (isinstance(message, TextMessage)):
@@ -339,12 +339,12 @@ def GetIsRegisteredUser(sender_id):
             return False
 
 def GetIdErrorState():
-    print("thread:" + GetCurrentThread() + " stack: GetIdErrorState")
+    print("thread:" + GetCurrentThread() + "stack: GetIdErrorState")
     return "095761bb-67d8-455b-bf09-4e32d0e8dc4f" #Выбор действия
 
 def ShowCarousel(sender_id, result_list, number_parts):
 
-    print("thread:" + GetCurrentThread() + " stack: ShowCarousel")
+    print("thread:" + GetCurrentThread() + "stack: ShowCarousel")
     max_buttons = 42
     if (len(result_list) > max_buttons ):
         count_in_part = max_buttons
@@ -362,7 +362,7 @@ def ShowCarousel(sender_id, result_list, number_parts):
                 isEnd = False
                 break
             elif index >= first_number:
-                buttons.append({"TextVAlign": "top", "TextHAlign": "left", "ActionBody": id, "ActionType":"reply",  "Text": view})
+                buttons.append({"TextVAlign": "top", "TextHAlign": "left", "ActionBody": id, "ActionType":"reply", "Text": view})
             index += 1
         buttons_keyboard = []
         if (isEnd == False):
@@ -383,7 +383,7 @@ def ShowCarousel(sender_id, result_list, number_parts):
             view = title_cortage
             if len(view) > 350:
                 view = view[:350]
-            buttons.append({"TextVAlign": "top", "TextHAlign": "left", "ActionBody": id,  "Text": view})
+            buttons.append({"TextVAlign": "top", "TextHAlign": "left", "ActionBody": id, "Text": view})
         buttons_keyboard.append({"Columns": 6, "Rows": 1, "ActionBody": "cancel", "Text": "Отменить"})
         text_keyboard.update({"Buttons": buttons_keyboard})
         ViberSendMessages(sender_id, [RichMediaMessage(min_api_version=4, rich_media={"Type": "rich_media", "BgColor": "#FFFFFF",
@@ -391,16 +391,16 @@ def ShowCarousel(sender_id, result_list, number_parts):
                                                                      keyboard=text_keyboard, min_api_version=4)])
 
 def SaveState(sender_id, state_id, data, data_user, carousel_id):
-    print("thread:" + GetCurrentThread() + " stack: SaveState")
-    print("thread:" + GetCurrentThread() + "  state_id " + state_id)
-    print("thread:" + GetCurrentThread() + "  sender_id " + sender_id)
+    print("thread:" + GetCurrentThread() + "stack: SaveState")
+    print("thread:" + GetCurrentThread() + "    state_id " + state_id)
+    print("thread:" + GetCurrentThread() + "    sender_id " + sender_id)
     if SaveStateToPostgress(sender_id, state_id, carousel_id, data_user, data):
         return True
     else:
         return False
 
 def RestoreState(sender_id):
-    print("thread:" + GetCurrentThread() + " stack: RestoreState")
+    print("thread:" + GetCurrentThread() + "stack: RestoreState")
     result_dict = RestoreStateFromPostgress(sender_id)
     if result_dict.get('state') == True:
          return (True, False ,result_dict.get('state_id'), result_dict.get('data'), result_dict.get('data_user'), result_dict.get('carousel_id'))
@@ -412,7 +412,7 @@ def RestoreState(sender_id):
 
 def proc02957edd8e984dd4a0aa530f15bba971(sender_id, message, data, service_data_bot_need, carousel_id):
     #Приветствие (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: proc02957edd8e984dd4a0aa530f15bba971")
+    print("thread:" + GetCurrentThread() + "stack: proc02957edd8e984dd4a0aa530f15bba971")
     if GetIdStateForClearData() == "02957edd-8e98-4dd4-a0aa-530f15bba971":
         service_data_bot_need = {}
         carousel_id = ''
@@ -431,7 +431,7 @@ def proc02957edd8e984dd4a0aa530f15bba971(sender_id, message, data, service_data_
 
 def proc_function02957edd8e984dd4a0aa530f15bba971(sender_id, message, data, service_data_bot_need, carousel_id):
     #Приветствие (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_function02957edd8e984dd4a0aa530f15bba971")
+    print("thread:" + GetCurrentThread() + "stack: proc_function02957edd8e984dd4a0aa530f15bba971")
     is_error, text, state = RequestItilium({"data": {"action": "is_not_registered","sender": sender_id}})
     if is_error:
         text_error = text
@@ -448,7 +448,7 @@ def proc_function02957edd8e984dd4a0aa530f15bba971(sender_id, message, data, serv
 
 def proc1b68be2d5a9a4d06adb59b874e1673ea(sender_id, message, data, service_data_bot_need, carousel_id):
     #Ввод секретного кода (выбор по результатам ввода с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc1b68be2d5a9a4d06adb59b874e1673ea")
+    print("thread:" + GetCurrentThread() + "stack: proc1b68be2d5a9a4d06adb59b874e1673ea")
     if GetIdStateForClearData() == "1b68be2d-5a9a-4d06-adb5-9b874e1673ea":
         service_data_bot_need = {}
         carousel_id = ''
@@ -462,7 +462,7 @@ def proc1b68be2d5a9a4d06adb59b874e1673ea(sender_id, message, data, service_data_
 
 def proc_function_expect_user1b68be2d5a9a4d06adb59b874e1673ea(sender_id, message, data, service_data_bot_need, carousel_id):
     # Выбор по результатам ввода с клавиатуры. Обработка ввота пользователя
-    print("thread:" + GetCurrentThread() + " stack: proc_function_expect_user1b68be2d5a9a4d06adb59b874e1673ea")
+    print("thread:" + GetCurrentThread() + "stack: proc_function_expect_user1b68be2d5a9a4d06adb59b874e1673ea")
     if not isinstance(data, dict):
         data = {}
     text = GetTextCommand(message)
@@ -476,7 +476,7 @@ def proc_function_expect_user1b68be2d5a9a4d06adb59b874e1673ea(sender_id, message
 
 def proc_function1b68be2d5a9a4d06adb59b874e1673ea(sender_id, text, data, carousel_id):
     #Ввод секретного кода (функция обработки выбора с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc_function1b68be2d5a9a4d06adb59b874e1673ea")
+    print("thread:" + GetCurrentThread() + "stack: proc_function1b68be2d5a9a4d06adb59b874e1673ea")
     is_error, text, state = RequestItilium({"data": {"action": "is_valid_code", "phone":text,"sender": sender_id}})
     if is_error:
         text_error = text
@@ -496,7 +496,7 @@ def proc_function1b68be2d5a9a4d06adb59b874e1673ea(sender_id, text, data, carouse
 
 def proc2b3f0bd4eef0409c9ffb14ffb0d21861(sender_id, message, data, service_data_bot_need, carousel_id):
     #Секретный код неверный
-    print("thread:" + GetCurrentThread() + " stack: proc2b3f0bd4eef0409c9ffb14ffb0d21861")
+    print("thread:" + GetCurrentThread() + "stack: proc2b3f0bd4eef0409c9ffb14ffb0d21861")
     if GetIdStateForClearData() == "2b3f0bd4-eef0-409c-9ffb-14ffb0d21861":
         service_data_bot_need = {}
         carousel_id = ''
@@ -507,7 +507,7 @@ def proc2b3f0bd4eef0409c9ffb14ffb0d21861(sender_id, message, data, service_data_
 
 def proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id):
     #Выбор действия (выбор из подчиненных команд)
-    print("thread:" + GetCurrentThread() + " stack: proc095761bb67d8455bbf094e32d0e8dc4f")
+    print("thread:" + GetCurrentThread() + "stack: proc095761bb67d8455bbf094e32d0e8dc4f")
     if GetIdStateForClearData() == "095761bb-67d8-455b-bf09-4e32d0e8dc4f":
         service_data_bot_need = {}
         carousel_id = ''
@@ -552,7 +552,7 @@ def proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_
 
 def proc_expect_user_button_click095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id):
     #Выбор действия (Обработчик выбора из подчиненных команд)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_user_button_click095761bb67d8455bbf094e32d0e8dc4f")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_user_button_click095761bb67d8455bbf094e32d0e8dc4f")
     command = GetTextCommand(message)
     if command == "76456fc5-a5d3-4b54-81dc-b15c34787790":
         proc76456fc5a5d34b5481dcb15c34787790(sender_id, message, data, service_data_bot_need, carousel_id) #Зарегистрировать обращение
@@ -569,7 +569,7 @@ def proc_expect_user_button_click095761bb67d8455bbf094e32d0e8dc4f(sender_id, mes
 
 def proc76456fc5a5d34b5481dcb15c34787790(sender_id, message, data, service_data_bot_need, carousel_id):
     #Зарегистрировать обращение (выбор по результатам ввода с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc76456fc5a5d34b5481dcb15c34787790")
+    print("thread:" + GetCurrentThread() + "stack: proc76456fc5a5d34b5481dcb15c34787790")
     if GetIdStateForClearData() == "76456fc5-a5d3-4b54-81dc-b15c34787790":
         service_data_bot_need = {}
         carousel_id = ''
@@ -590,7 +590,7 @@ def proc76456fc5a5d34b5481dcb15c34787790(sender_id, message, data, service_data_
 
 def proc_function_expect_user76456fc5a5d34b5481dcb15c34787790(sender_id, message, data, service_data_bot_need, carousel_id):
     # Выбор по результатам ввода с клавиатуры. Обработка ввота пользователя
-    print("thread:" + GetCurrentThread() + " stack: proc_function_expect_user76456fc5a5d34b5481dcb15c34787790")
+    print("thread:" + GetCurrentThread() + "stack: proc_function_expect_user76456fc5a5d34b5481dcb15c34787790")
     if not isinstance(data, dict):
         data = {}
     text = GetTextCommand(message)
@@ -607,7 +607,7 @@ def proc_function_expect_user76456fc5a5d34b5481dcb15c34787790(sender_id, message
 
 def proc_function76456fc5a5d34b5481dcb15c34787790(sender_id, text, data, carousel_id):
     #Зарегистрировать обращение (функция обработки выбора с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc_function76456fc5a5d34b5481dcb15c34787790")
+    print("thread:" + GetCurrentThread() + "stack: proc_function76456fc5a5d34b5481dcb15c34787790")
     is_error, text, state = RequestItilium({"data": {"action": "is_registration","text": text, "sender": sender_id}})
     if is_error:
         text_error = text
@@ -624,7 +624,7 @@ def proc_function76456fc5a5d34b5481dcb15c34787790(sender_id, text, data, carouse
 
 def proc6cc426444b074aa888dceecf90f5260a(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отмена
-    print("thread:" + GetCurrentThread() + " stack: proc6cc426444b074aa888dceecf90f5260a")
+    print("thread:" + GetCurrentThread() + "stack: proc6cc426444b074aa888dceecf90f5260a")
     if GetIdStateForClearData() == "6cc42644-4b07-4aa8-88dc-eecf90f5260a":
         service_data_bot_need = {}
         carousel_id = ''
@@ -635,7 +635,7 @@ def proc6cc426444b074aa888dceecf90f5260a(sender_id, message, data, service_data_
 
 def proc91d863c10ff0456bacb086818cac8a03(sender_id, message, data, service_data_bot_need, carousel_id):
     #Внести уточнения (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: proc91d863c10ff0456bacb086818cac8a03")
+    print("thread:" + GetCurrentThread() + "stack: proc91d863c10ff0456bacb086818cac8a03")
     if GetIdStateForClearData() == "91d863c1-0ff0-456b-acb0-86818cac8a03":
         service_data_bot_need = {}
         carousel_id = ''
@@ -657,7 +657,7 @@ def proc91d863c10ff0456bacb086818cac8a03(sender_id, message, data, service_data_
 
 def proc_function91d863c10ff0456bacb086818cac8a03(sender_id, message, data, service_data_bot_need, carousel_id):
     #Внести уточнения (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_function91d863c10ff0456bacb086818cac8a03")
+    print("thread:" + GetCurrentThread() + "stack: proc_function91d863c10ff0456bacb086818cac8a03")
     is_error, text, state = RequestItilium({"data": {"action": "is_list_open_incidents","sender": sender_id}})
     if is_error:
         text_error = text
@@ -684,7 +684,7 @@ def proc_function91d863c10ff0456bacb086818cac8a03(sender_id, message, data, serv
 
 def proc1252095275704b2a907cb2e089e0ed77(sender_id, message, data, service_data_bot_need, carousel_id):
     #Карусель внести уточнения (Карусель)
-    print("thread:" + GetCurrentThread() + " stack: proc1252095275704b2a907cb2e089e0ed77")
+    print("thread:" + GetCurrentThread() + "stack: proc1252095275704b2a907cb2e089e0ed77")
     if GetIdStateForClearData() == "12520952-7570-4b2a-907c-b2e089e0ed77":
         service_data_bot_need = {}
         carousel_id = ''
@@ -711,13 +711,13 @@ def proc1252095275704b2a907cb2e089e0ed77(sender_id, message, data, service_data_
 
 def proc_get_list_corteges1252095275704b2a907cb2e089e0ed77(sender_id, data, carousel_id):
     #Карусель внести уточнения (получение списка кортежей)
-    print("thread:" + GetCurrentThread() + " stack: proc_get_list_corteges1252095275704b2a907cb2e089e0ed77")
+    print("thread:" + GetCurrentThread() + "stack: proc_get_list_corteges1252095275704b2a907cb2e089e0ed77")
     return data.get('list_open_incidents')
 
 
 def proc_expect_comand_user1252095275704b2a907cb2e089e0ed77(sender_id, message, data, service_data_bot_need, carousel_id):
     #Карусель внести уточнения (обработчик выбора пользователя из карусели или команды под ней)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_comand_user1252095275704b2a907cb2e089e0ed77")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_comand_user1252095275704b2a907cb2e089e0ed77")
     id = GetTextCommand(message)
     if id == "cancel":
         proca0981bccc8ee486e943257b9de36f2d1(sender_id, message, data, service_data_bot_need, carousel_id) #Уточнения не внесены(команда "Отменить")
@@ -745,7 +745,7 @@ def proc_expect_comand_user1252095275704b2a907cb2e089e0ed77(sender_id, message, 
 
 def proc84c5c09c78824f2f819bd1eef1b3913e(sender_id, message, data, service_data_bot_need, carousel_id):
     #Обработчик вывода
-    print("thread:" + GetCurrentThread() + " stack: proc84c5c09c78824f2f819bd1eef1b3913e")
+    print("thread:" + GetCurrentThread() + "stack: proc84c5c09c78824f2f819bd1eef1b3913e")
     if GetIdStateForClearData() == "84c5c09c-7882-4f2f-819b-d1eef1b3913e":
         service_data_bot_need = {}
         carousel_id = ''
@@ -758,7 +758,7 @@ def proc84c5c09c78824f2f819bd1eef1b3913e(sender_id, message, data, service_data_
 
 def proc_get_user_detail_view_by_id84c5c09c78824f2f819bd1eef1b3913e(sender_id, carousel_id, data):
     #Обработчик вывода (функция получения детального представления выбранного элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proc_get_user_detail_view_by_id84c5c09c78824f2f819bd1eef1b3913e")
+    print("thread:" + GetCurrentThread() + "stack: proc_get_user_detail_view_by_id84c5c09c78824f2f819bd1eef1b3913e")
     for id, detail_view in data.get('list_open_incidents_full'):
         if id == carousel_id:
             return detail_view
@@ -766,7 +766,7 @@ def proc_get_user_detail_view_by_id84c5c09c78824f2f819bd1eef1b3913e(sender_id, c
 
 def proced689fd18d5942468b1892b7a2f97292(sender_id, message, data, service_data_bot_need, carousel_id):
     #Команды карусели (команды элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proced689fd18d5942468b1892b7a2f97292")
+    print("thread:" + GetCurrentThread() + "stack: proced689fd18d5942468b1892b7a2f97292")
     if GetIdStateForClearData() == "ed689fd1-8d59-4246-8b18-92b7a2f97292":
         service_data_bot_need = {}
         carousel_id = ''
@@ -795,7 +795,7 @@ def proced689fd18d5942468b1892b7a2f97292(sender_id, message, data, service_data_
 
 def proc_expect_user_button_clicked689fd18d5942468b1892b7a2f97292(sender_id, message, data, service_data_bot_need, carousel_id):
     #Команды карусели (Обработчик выбора из подчиненных команд элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_user_button_clicked689fd18d5942468b1892b7a2f97292")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_user_button_clicked689fd18d5942468b1892b7a2f97292")
     command = GetTextCommand(message)
     if command == "bb53668e-eb8e-4153-bdf7-a72781739830":
         procbb53668eeb8e4153bdf7a72781739830(sender_id, message, data, service_data_bot_need, carousel_id) #Ввести уточнение
@@ -806,7 +806,7 @@ def proc_expect_user_button_clicked689fd18d5942468b1892b7a2f97292(sender_id, mes
 
 def procbb53668eeb8e4153bdf7a72781739830(sender_id, message, data, service_data_bot_need, carousel_id):
     #Ввести уточнение (выбор по результатам ввода с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: procbb53668eeb8e4153bdf7a72781739830")
+    print("thread:" + GetCurrentThread() + "stack: procbb53668eeb8e4153bdf7a72781739830")
     if GetIdStateForClearData() == "bb53668e-eb8e-4153-bdf7-a72781739830":
         service_data_bot_need = {}
         carousel_id = ''
@@ -827,7 +827,7 @@ def procbb53668eeb8e4153bdf7a72781739830(sender_id, message, data, service_data_
 
 def proc_function_expect_userbb53668eeb8e4153bdf7a72781739830(sender_id, message, data, service_data_bot_need, carousel_id):
     # Выбор по результатам ввода с клавиатуры. Обработка ввота пользователя
-    print("thread:" + GetCurrentThread() + " stack: proc_function_expect_userbb53668eeb8e4153bdf7a72781739830")
+    print("thread:" + GetCurrentThread() + "stack: proc_function_expect_userbb53668eeb8e4153bdf7a72781739830")
     if not isinstance(data, dict):
         data = {}
     text = GetTextCommand(message)
@@ -844,7 +844,7 @@ def proc_function_expect_userbb53668eeb8e4153bdf7a72781739830(sender_id, message
 
 def proc_functionbb53668eeb8e4153bdf7a72781739830(sender_id, text, data, carousel_id):
     #Ввести уточнение (функция обработки выбора с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc_functionbb53668eeb8e4153bdf7a72781739830")
+    print("thread:" + GetCurrentThread() + "stack: proc_functionbb53668eeb8e4153bdf7a72781739830")
     is_error, text, state = RequestItilium({"data": {"action": "is_add_converstaion","incident" : carousel_id,"text":text,"sender": sender_id}})
 
     if is_error:
@@ -861,7 +861,7 @@ def proc_functionbb53668eeb8e4153bdf7a72781739830(sender_id, text, data, carouse
 
 def proc2ad315bd42ff45b885aecdc9d04c0a9e(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отмена
-    print("thread:" + GetCurrentThread() + " stack: proc2ad315bd42ff45b885aecdc9d04c0a9e")
+    print("thread:" + GetCurrentThread() + "stack: proc2ad315bd42ff45b885aecdc9d04c0a9e")
     if GetIdStateForClearData() == "2ad315bd-42ff-45b8-85ae-cdc9d04c0a9e":
         service_data_bot_need = {}
         carousel_id = ''
@@ -871,7 +871,7 @@ def proc2ad315bd42ff45b885aecdc9d04c0a9e(sender_id, message, data, service_data_
 
 def proca0981bccc8ee486e943257b9de36f2d1(sender_id, message, data, service_data_bot_need, carousel_id):
     #Уточнения не внесены
-    print("thread:" + GetCurrentThread() + " stack: proca0981bccc8ee486e943257b9de36f2d1")
+    print("thread:" + GetCurrentThread() + "stack: proca0981bccc8ee486e943257b9de36f2d1")
     if GetIdStateForClearData() == "a0981bcc-c8ee-486e-9432-57b9de36f2d1":
         service_data_bot_need = {}
         carousel_id = ''
@@ -882,7 +882,7 @@ def proca0981bccc8ee486e943257b9de36f2d1(sender_id, message, data, service_data_
 
 def proce022f99d4b914e8a8469546d143ff4e5(sender_id, message, data, service_data_bot_need, carousel_id):
     #Уточнения внесены
-    print("thread:" + GetCurrentThread() + " stack: proce022f99d4b914e8a8469546d143ff4e5")
+    print("thread:" + GetCurrentThread() + "stack: proce022f99d4b914e8a8469546d143ff4e5")
     if GetIdStateForClearData() == "e022f99d-4b91-4e8a-8469-546d143ff4e5":
         service_data_bot_need = {}
         carousel_id = ''
@@ -893,7 +893,7 @@ def proce022f99d4b914e8a8469546d143ff4e5(sender_id, message, data, service_data_
 
 def proc4cca60de6e5643a0a27b251f132fafac(sender_id, message, data, service_data_bot_need, carousel_id):
     #Команды для выбранного инцидента для уточнения (выбор из подчиненных команд)
-    print("thread:" + GetCurrentThread() + " stack: proc4cca60de6e5643a0a27b251f132fafac")
+    print("thread:" + GetCurrentThread() + "stack: proc4cca60de6e5643a0a27b251f132fafac")
     if GetIdStateForClearData() == "4cca60de-6e56-43a0-a27b-251f132fafac":
         service_data_bot_need = {}
         carousel_id = ''
@@ -922,7 +922,7 @@ def proc4cca60de6e5643a0a27b251f132fafac(sender_id, message, data, service_data_
 
 def proc_expect_user_button_click4cca60de6e5643a0a27b251f132fafac(sender_id, message, data, service_data_bot_need, carousel_id):
     #Команды для выбранного инцидента для уточнения (Обработчик выбора из подчиненных команд)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_user_button_click4cca60de6e5643a0a27b251f132fafac")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_user_button_click4cca60de6e5643a0a27b251f132fafac")
     command = GetTextCommand(message)
     if command == "971494b8-473d-4fbe-94c6-86b320392d3a":
         proc971494b8473d4fbe94c686b320392d3a(sender_id, message, data, service_data_bot_need, carousel_id) #Введите уточнение
@@ -933,7 +933,7 @@ def proc_expect_user_button_click4cca60de6e5643a0a27b251f132fafac(sender_id, mes
 
 def proc971494b8473d4fbe94c686b320392d3a(sender_id, message, data, service_data_bot_need, carousel_id):
     #Введите уточнение
-    print("thread:" + GetCurrentThread() + " stack: proc971494b8473d4fbe94c686b320392d3a")
+    print("thread:" + GetCurrentThread() + "stack: proc971494b8473d4fbe94c686b320392d3a")
     if GetIdStateForClearData() == "971494b8-473d-4fbe-94c6-86b320392d3a":
         service_data_bot_need = {}
         carousel_id = ''
@@ -943,7 +943,7 @@ def proc971494b8473d4fbe94c686b320392d3a(sender_id, message, data, service_data_
 
 def proc29615d836647459dac36095a2b7287cc(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отмена (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: proc29615d836647459dac36095a2b7287cc")
+    print("thread:" + GetCurrentThread() + "stack: proc29615d836647459dac36095a2b7287cc")
     if GetIdStateForClearData() == "29615d83-6647-459d-ac36-095a2b7287cc":
         service_data_bot_need = {}
         carousel_id = ''
@@ -957,12 +957,12 @@ def proc29615d836647459dac36095a2b7287cc(sender_id, message, data, service_data_
 
 def proc_function29615d836647459dac36095a2b7287cc(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отмена (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_function29615d836647459dac36095a2b7287cc")
+    print("thread:" + GetCurrentThread() + "stack: proc_function29615d836647459dac36095a2b7287cc")
     return "1"
 
 def proc5160f46d71b8466a8b28db1bf17d5392(sender_id, message, data, service_data_bot_need, carousel_id):
     #Обращения для подтверждения (Карусель)
-    print("thread:" + GetCurrentThread() + " stack: proc5160f46d71b8466a8b28db1bf17d5392")
+    print("thread:" + GetCurrentThread() + "stack: proc5160f46d71b8466a8b28db1bf17d5392")
     if GetIdStateForClearData() == "5160f46d-71b8-466a-8b28-db1bf17d5392":
         service_data_bot_need = {}
         carousel_id = ''
@@ -996,7 +996,7 @@ def proc5160f46d71b8466a8b28db1bf17d5392(sender_id, message, data, service_data_
 
 def proc_get_list_corteges5160f46d71b8466a8b28db1bf17d5392(sender_id, data, carousel_id):
     #Обращения для подтверждения (получение списка кортежей)
-    print("thread:" + GetCurrentThread() + " stack: proc_get_list_corteges5160f46d71b8466a8b28db1bf17d5392")
+    print("thread:" + GetCurrentThread() + "stack: proc_get_list_corteges5160f46d71b8466a8b28db1bf17d5392")
     is_error, text, state = RequestItilium({"data": {"action": "is_list_need_confirmed_incidents","sender": sender_id}})
     if is_error:
         text_error = text
@@ -1023,7 +1023,7 @@ def proc_get_list_corteges5160f46d71b8466a8b28db1bf17d5392(sender_id, data, caro
 
 def proc_expect_comand_user5160f46d71b8466a8b28db1bf17d5392(sender_id, message, data, service_data_bot_need, carousel_id):
     #Обращения для подтверждения (обработчик выбора пользователя из карусели или команды под ней)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_comand_user5160f46d71b8466a8b28db1bf17d5392")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_comand_user5160f46d71b8466a8b28db1bf17d5392")
     id = GetTextCommand(message)
     if id == "cancel":
         proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id) #Выбор действия(команда "Отменить")
@@ -1051,7 +1051,7 @@ def proc_expect_comand_user5160f46d71b8466a8b28db1bf17d5392(sender_id, message, 
 
 def procdae1f3640d8a4eb0aed3fc1b63e187aa(sender_id, message, data, service_data_bot_need, carousel_id):
     #Команды карусели (команды элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: procdae1f3640d8a4eb0aed3fc1b63e187aa")
+    print("thread:" + GetCurrentThread() + "stack: procdae1f3640d8a4eb0aed3fc1b63e187aa")
     if GetIdStateForClearData() == "dae1f364-0d8a-4eb0-aed3-fc1b63e187aa":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1085,7 +1085,7 @@ def procdae1f3640d8a4eb0aed3fc1b63e187aa(sender_id, message, data, service_data_
 
 def proc_expect_user_button_clickdae1f3640d8a4eb0aed3fc1b63e187aa(sender_id, message, data, service_data_bot_need, carousel_id):
     #Команды карусели (Обработчик выбора из подчиненных команд элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_user_button_clickdae1f3640d8a4eb0aed3fc1b63e187aa")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_user_button_clickdae1f3640d8a4eb0aed3fc1b63e187aa")
     command = GetTextCommand(message)
     if command == "5ba6c9fd-cb21-4aa2-972c-4020574f3157":
         proc5ba6c9fdcb214aa2972c4020574f3157(sender_id, message, data, service_data_bot_need, carousel_id) #Подтвердить
@@ -1098,7 +1098,7 @@ def proc_expect_user_button_clickdae1f3640d8a4eb0aed3fc1b63e187aa(sender_id, mes
 
 def proc5ba6c9fdcb214aa2972c4020574f3157(sender_id, message, data, service_data_bot_need, carousel_id):
     #Подтвердить (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: proc5ba6c9fdcb214aa2972c4020574f3157")
+    print("thread:" + GetCurrentThread() + "stack: proc5ba6c9fdcb214aa2972c4020574f3157")
     if GetIdStateForClearData() == "5ba6c9fd-cb21-4aa2-972c-4020574f3157":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1120,7 +1120,7 @@ def proc5ba6c9fdcb214aa2972c4020574f3157(sender_id, message, data, service_data_
 
 def proc_function5ba6c9fdcb214aa2972c4020574f3157(sender_id, message, data, service_data_bot_need, carousel_id):
     #Подтвердить (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_function5ba6c9fdcb214aa2972c4020574f3157")
+    print("thread:" + GetCurrentThread() + "stack: proc_function5ba6c9fdcb214aa2972c4020574f3157")
     is_error, text, state = RequestItilium({"data": {"action": "is_get_rating_for_incidents_confirmation", "incident":carousel_id,"sender": sender_id}})
     if is_error:
         text_error = text
@@ -1151,7 +1151,7 @@ def proc_function5ba6c9fdcb214aa2972c4020574f3157(sender_id, message, data, serv
 
 def proca22a380f1e104600808c465bd6ab3777(sender_id, message, data, service_data_bot_need, carousel_id):
     #Указать оценку обязательно (выбор из подчиненных команд)
-    print("thread:" + GetCurrentThread() + " stack: proca22a380f1e104600808c465bd6ab3777")
+    print("thread:" + GetCurrentThread() + "stack: proca22a380f1e104600808c465bd6ab3777")
     if GetIdStateForClearData() == "a22a380f-1e10-4600-808c-465bd6ab3777":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1201,7 +1201,7 @@ def proca22a380f1e104600808c465bd6ab3777(sender_id, message, data, service_data_
 
 def proc_expect_user_button_clicka22a380f1e104600808c465bd6ab3777(sender_id, message, data, service_data_bot_need, carousel_id):
     #Указать оценку обязательно (Обработчик выбора из подчиненных команд)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_user_button_clicka22a380f1e104600808c465bd6ab3777")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_user_button_clicka22a380f1e104600808c465bd6ab3777")
     command = GetTextCommand(message)
     if command == "f78d8071-4386-4b3f-8cd2-91a0d503f281":
         procf78d807143864b3f8cd291a0d503f281(sender_id, message, data, service_data_bot_need, carousel_id) #1
@@ -1220,7 +1220,7 @@ def proc_expect_user_button_clicka22a380f1e104600808c465bd6ab3777(sender_id, mes
 
 def procf78d807143864b3f8cd291a0d503f281(sender_id, message, data, service_data_bot_need, carousel_id):
     #1 (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: procf78d807143864b3f8cd291a0d503f281")
+    print("thread:" + GetCurrentThread() + "stack: procf78d807143864b3f8cd291a0d503f281")
     if GetIdStateForClearData() == "f78d8071-4386-4b3f-8cd2-91a0d503f281":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1236,7 +1236,7 @@ def procf78d807143864b3f8cd291a0d503f281(sender_id, message, data, service_data_
 
 def proc_functionf78d807143864b3f8cd291a0d503f281(sender_id, message, data, service_data_bot_need, carousel_id):
     #1 (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_functionf78d807143864b3f8cd291a0d503f281")
+    print("thread:" + GetCurrentThread() + "stack: proc_functionf78d807143864b3f8cd291a0d503f281")
     data.update({"rating":1})
     if data.get('one_need_comment'):
         return "need_comment_surely"
@@ -1245,7 +1245,7 @@ def proc_functionf78d807143864b3f8cd291a0d503f281(sender_id, message, data, serv
 
 def procd2aeca9275214a6caa98de3001dd081f(sender_id, message, data, service_data_bot_need, carousel_id):
     #Указать комментарий обязательно (выбор по результатам ввода с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: procd2aeca9275214a6caa98de3001dd081f")
+    print("thread:" + GetCurrentThread() + "stack: procd2aeca9275214a6caa98de3001dd081f")
     if GetIdStateForClearData() == "d2aeca92-7521-4a6c-aa98-de3001dd081f":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1266,7 +1266,7 @@ def procd2aeca9275214a6caa98de3001dd081f(sender_id, message, data, service_data_
 
 def proc_function_expect_userd2aeca9275214a6caa98de3001dd081f(sender_id, message, data, service_data_bot_need, carousel_id):
     # Выбор по результатам ввода с клавиатуры. Обработка ввота пользователя
-    print("thread:" + GetCurrentThread() + " stack: proc_function_expect_userd2aeca9275214a6caa98de3001dd081f")
+    print("thread:" + GetCurrentThread() + "stack: proc_function_expect_userd2aeca9275214a6caa98de3001dd081f")
     if not isinstance(data, dict):
         data = {}
     text = GetTextCommand(message)
@@ -1279,13 +1279,13 @@ def proc_function_expect_userd2aeca9275214a6caa98de3001dd081f(sender_id, message
 
 def proc_functiond2aeca9275214a6caa98de3001dd081f(sender_id, text, data, carousel_id):
     #Указать комментарий обязательно (функция обработки выбора с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc_functiond2aeca9275214a6caa98de3001dd081f")
+    print("thread:" + GetCurrentThread() + "stack: proc_functiond2aeca9275214a6caa98de3001dd081f")
     data.update({"comment": text})
     return "save"
 
 def proc4f2c3d625e2f4665bf75177d4363273c(sender_id, message, data, service_data_bot_need, carousel_id):
     #Указать комментарий необязательно (выбор по результатам ввода с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc4f2c3d625e2f4665bf75177d4363273c")
+    print("thread:" + GetCurrentThread() + "stack: proc4f2c3d625e2f4665bf75177d4363273c")
     if GetIdStateForClearData() == "4f2c3d62-5e2f-4665-bf75-177d4363273c":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1306,7 +1306,7 @@ def proc4f2c3d625e2f4665bf75177d4363273c(sender_id, message, data, service_data_
 
 def proc_function_expect_user4f2c3d625e2f4665bf75177d4363273c(sender_id, message, data, service_data_bot_need, carousel_id):
     # Выбор по результатам ввода с клавиатуры. Обработка ввота пользователя
-    print("thread:" + GetCurrentThread() + " stack: proc_function_expect_user4f2c3d625e2f4665bf75177d4363273c")
+    print("thread:" + GetCurrentThread() + "stack: proc_function_expect_user4f2c3d625e2f4665bf75177d4363273c")
     if not isinstance(data, dict):
         data = {}
     text = GetTextCommand(message)
@@ -1319,13 +1319,13 @@ def proc_function_expect_user4f2c3d625e2f4665bf75177d4363273c(sender_id, message
 
 def proc_function4f2c3d625e2f4665bf75177d4363273c(sender_id, text, data, carousel_id):
     #Указать комментарий необязательно (функция обработки выбора с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc_function4f2c3d625e2f4665bf75177d4363273c")
+    print("thread:" + GetCurrentThread() + "stack: proc_function4f2c3d625e2f4665bf75177d4363273c")
     data.update({"comment": text})
     return "save"
 
 def procf8baff8bac014776849ff22db27006da(sender_id, message, data, service_data_bot_need, carousel_id):
     #Пропустить
-    print("thread:" + GetCurrentThread() + " stack: procf8baff8bac014776849ff22db27006da")
+    print("thread:" + GetCurrentThread() + "stack: procf8baff8bac014776849ff22db27006da")
     if GetIdStateForClearData() == "f8baff8b-ac01-4776-849f-f22db27006da":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1335,7 +1335,7 @@ def procf8baff8bac014776849ff22db27006da(sender_id, message, data, service_data_
 
 def proc70a014c3ff72418abb1b94326c535cd6(sender_id, message, data, service_data_bot_need, carousel_id):
     #2 (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: proc70a014c3ff72418abb1b94326c535cd6")
+    print("thread:" + GetCurrentThread() + "stack: proc70a014c3ff72418abb1b94326c535cd6")
     if GetIdStateForClearData() == "70a014c3-ff72-418a-bb1b-94326c535cd6":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1351,7 +1351,7 @@ def proc70a014c3ff72418abb1b94326c535cd6(sender_id, message, data, service_data_
 
 def proc_function70a014c3ff72418abb1b94326c535cd6(sender_id, message, data, service_data_bot_need, carousel_id):
     #2 (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_function70a014c3ff72418abb1b94326c535cd6")
+    print("thread:" + GetCurrentThread() + "stack: proc_function70a014c3ff72418abb1b94326c535cd6")
     data.update({"rating":2})
     if data.get('two_need_comment'):
         return "need_comment_surely"
@@ -1360,7 +1360,7 @@ def proc_function70a014c3ff72418abb1b94326c535cd6(sender_id, message, data, serv
 
 def proc1c315c3c887a489b95522e1316af7b35(sender_id, message, data, service_data_bot_need, carousel_id):
     #3 (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: proc1c315c3c887a489b95522e1316af7b35")
+    print("thread:" + GetCurrentThread() + "stack: proc1c315c3c887a489b95522e1316af7b35")
     if GetIdStateForClearData() == "1c315c3c-887a-489b-9552-2e1316af7b35":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1376,7 +1376,7 @@ def proc1c315c3c887a489b95522e1316af7b35(sender_id, message, data, service_data_
 
 def proc_function1c315c3c887a489b95522e1316af7b35(sender_id, message, data, service_data_bot_need, carousel_id):
     #3 (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_function1c315c3c887a489b95522e1316af7b35")
+    print("thread:" + GetCurrentThread() + "stack: proc_function1c315c3c887a489b95522e1316af7b35")
     data.update({"rating":3})
     if data.get('three_need_comment'):
         return "need_comment_surely"
@@ -1385,7 +1385,7 @@ def proc_function1c315c3c887a489b95522e1316af7b35(sender_id, message, data, serv
 
 def proc12a983c4102340aa85d7d182b9a7e2c5(sender_id, message, data, service_data_bot_need, carousel_id):
     #4 (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: proc12a983c4102340aa85d7d182b9a7e2c5")
+    print("thread:" + GetCurrentThread() + "stack: proc12a983c4102340aa85d7d182b9a7e2c5")
     if GetIdStateForClearData() == "12a983c4-1023-40aa-85d7-d182b9a7e2c5":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1401,7 +1401,7 @@ def proc12a983c4102340aa85d7d182b9a7e2c5(sender_id, message, data, service_data_
 
 def proc_function12a983c4102340aa85d7d182b9a7e2c5(sender_id, message, data, service_data_bot_need, carousel_id):
     #4 (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_function12a983c4102340aa85d7d182b9a7e2c5")
+    print("thread:" + GetCurrentThread() + "stack: proc_function12a983c4102340aa85d7d182b9a7e2c5")
     data.update({"rating":4})
     if data.get('four_need_comment'):
         return "need_comment_surely"
@@ -1410,7 +1410,7 @@ def proc_function12a983c4102340aa85d7d182b9a7e2c5(sender_id, message, data, serv
 
 def proc619fd5ff848446fd8f2217bb68bc6a3b(sender_id, message, data, service_data_bot_need, carousel_id):
     #5 (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: proc619fd5ff848446fd8f2217bb68bc6a3b")
+    print("thread:" + GetCurrentThread() + "stack: proc619fd5ff848446fd8f2217bb68bc6a3b")
     if GetIdStateForClearData() == "619fd5ff-8484-46fd-8f22-17bb68bc6a3b":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1426,7 +1426,7 @@ def proc619fd5ff848446fd8f2217bb68bc6a3b(sender_id, message, data, service_data_
 
 def proc_function619fd5ff848446fd8f2217bb68bc6a3b(sender_id, message, data, service_data_bot_need, carousel_id):
     #5 (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_function619fd5ff848446fd8f2217bb68bc6a3b")
+    print("thread:" + GetCurrentThread() + "stack: proc_function619fd5ff848446fd8f2217bb68bc6a3b")
     data.update({"rating":5})
     if data.get('five_need_comment'):
         return "need_comment_surely"
@@ -1435,7 +1435,7 @@ def proc_function619fd5ff848446fd8f2217bb68bc6a3b(sender_id, message, data, serv
 
 def proce6d53aa2210b4ed38e9f5e6cea9bc777(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отменить
-    print("thread:" + GetCurrentThread() + " stack: proce6d53aa2210b4ed38e9f5e6cea9bc777")
+    print("thread:" + GetCurrentThread() + "stack: proce6d53aa2210b4ed38e9f5e6cea9bc777")
     if GetIdStateForClearData() == "e6d53aa2-210b-4ed3-8e9f-5e6cea9bc777":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1446,7 +1446,7 @@ def proce6d53aa2210b4ed38e9f5e6cea9bc777(sender_id, message, data, service_data_
 
 def procd454043806d1401f87b5ab49f4142f18(sender_id, message, data, service_data_bot_need, carousel_id):
     #Указать оценку по желанию (выбор из подчиненных команд)
-    print("thread:" + GetCurrentThread() + " stack: procd454043806d1401f87b5ab49f4142f18")
+    print("thread:" + GetCurrentThread() + "stack: procd454043806d1401f87b5ab49f4142f18")
     if GetIdStateForClearData() == "d4540438-06d1-401f-87b5-ab49f4142f18":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1501,7 +1501,7 @@ def procd454043806d1401f87b5ab49f4142f18(sender_id, message, data, service_data_
 
 def proc_expect_user_button_clickd454043806d1401f87b5ab49f4142f18(sender_id, message, data, service_data_bot_need, carousel_id):
     #Указать оценку по желанию (Обработчик выбора из подчиненных команд)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_user_button_clickd454043806d1401f87b5ab49f4142f18")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_user_button_clickd454043806d1401f87b5ab49f4142f18")
     command = GetTextCommand(message)
     if command == "8fe80170-3cea-47eb-8291-e37e9d4751aa":
         proc8fe801703cea47eb8291e37e9d4751aa(sender_id, message, data, service_data_bot_need, carousel_id) #1
@@ -1522,7 +1522,7 @@ def proc_expect_user_button_clickd454043806d1401f87b5ab49f4142f18(sender_id, mes
 
 def proc8fe801703cea47eb8291e37e9d4751aa(sender_id, message, data, service_data_bot_need, carousel_id):
     #1
-    print("thread:" + GetCurrentThread() + " stack: proc8fe801703cea47eb8291e37e9d4751aa")
+    print("thread:" + GetCurrentThread() + "stack: proc8fe801703cea47eb8291e37e9d4751aa")
     if GetIdStateForClearData() == "8fe80170-3cea-47eb-8291-e37e9d4751aa":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1532,7 +1532,7 @@ def proc8fe801703cea47eb8291e37e9d4751aa(sender_id, message, data, service_data_
 
 def proc15a311c3a872416ea2f49b8f41712bad(sender_id, message, data, service_data_bot_need, carousel_id):
     #2
-    print("thread:" + GetCurrentThread() + " stack: proc15a311c3a872416ea2f49b8f41712bad")
+    print("thread:" + GetCurrentThread() + "stack: proc15a311c3a872416ea2f49b8f41712bad")
     if GetIdStateForClearData() == "15a311c3-a872-416e-a2f4-9b8f41712bad":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1542,7 +1542,7 @@ def proc15a311c3a872416ea2f49b8f41712bad(sender_id, message, data, service_data_
 
 def procb63c3343a6f042f9bd5f575fdbe43d20(sender_id, message, data, service_data_bot_need, carousel_id):
     #3
-    print("thread:" + GetCurrentThread() + " stack: procb63c3343a6f042f9bd5f575fdbe43d20")
+    print("thread:" + GetCurrentThread() + "stack: procb63c3343a6f042f9bd5f575fdbe43d20")
     if GetIdStateForClearData() == "b63c3343-a6f0-42f9-bd5f-575fdbe43d20":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1552,7 +1552,7 @@ def procb63c3343a6f042f9bd5f575fdbe43d20(sender_id, message, data, service_data_
 
 def proc8ce4471c310e49c4bad62b82996d23e8(sender_id, message, data, service_data_bot_need, carousel_id):
     #4
-    print("thread:" + GetCurrentThread() + " stack: proc8ce4471c310e49c4bad62b82996d23e8")
+    print("thread:" + GetCurrentThread() + "stack: proc8ce4471c310e49c4bad62b82996d23e8")
     if GetIdStateForClearData() == "8ce4471c-310e-49c4-bad6-2b82996d23e8":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1562,7 +1562,7 @@ def proc8ce4471c310e49c4bad62b82996d23e8(sender_id, message, data, service_data_
 
 def procea302a5cac3d477b8fd268a66fb56264(sender_id, message, data, service_data_bot_need, carousel_id):
     #5
-    print("thread:" + GetCurrentThread() + " stack: procea302a5cac3d477b8fd268a66fb56264")
+    print("thread:" + GetCurrentThread() + "stack: procea302a5cac3d477b8fd268a66fb56264")
     if GetIdStateForClearData() == "ea302a5c-ac3d-477b-8fd2-68a66fb56264":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1572,7 +1572,7 @@ def procea302a5cac3d477b8fd268a66fb56264(sender_id, message, data, service_data_
 
 def proc45188a2fe76f463da9304c5a53876d70(sender_id, message, data, service_data_bot_need, carousel_id):
     #Пропустить (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: proc45188a2fe76f463da9304c5a53876d70")
+    print("thread:" + GetCurrentThread() + "stack: proc45188a2fe76f463da9304c5a53876d70")
     if GetIdStateForClearData() == "45188a2f-e76f-463d-a930-4c5a53876d70":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1586,7 +1586,7 @@ def proc45188a2fe76f463da9304c5a53876d70(sender_id, message, data, service_data_
 
 def proc_function45188a2fe76f463da9304c5a53876d70(sender_id, message, data, service_data_bot_need, carousel_id):
     #Пропустить (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_function45188a2fe76f463da9304c5a53876d70")
+    print("thread:" + GetCurrentThread() + "stack: proc_function45188a2fe76f463da9304c5a53876d70")
     data.update({"rating":-1})
     data.update({"comment": ""})
     return "save"
@@ -1594,7 +1594,7 @@ def proc_function45188a2fe76f463da9304c5a53876d70(sender_id, message, data, serv
 
 def procc937a5192897450ebc6bca9aa2c743e2(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отменить
-    print("thread:" + GetCurrentThread() + " stack: procc937a5192897450ebc6bca9aa2c743e2")
+    print("thread:" + GetCurrentThread() + "stack: procc937a5192897450ebc6bca9aa2c743e2")
     if GetIdStateForClearData() == "c937a519-2897-450e-bc6b-ca9aa2c743e2":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1605,7 +1605,7 @@ def procc937a5192897450ebc6bca9aa2c743e2(sender_id, message, data, service_data_
 
 def proc01a9eda608194126be9830251a261e42(sender_id, message, data, service_data_bot_need, carousel_id):
     #Подтвердить общая (программный выбор)
-    print("thread:" + GetCurrentThread() + " stack: proc01a9eda608194126be9830251a261e42")
+    print("thread:" + GetCurrentThread() + "stack: proc01a9eda608194126be9830251a261e42")
     if GetIdStateForClearData() == "01a9eda6-0819-4126-be98-30251a261e42":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1623,7 +1623,7 @@ def proc01a9eda608194126be9830251a261e42(sender_id, message, data, service_data_
 
 def proc_function01a9eda608194126be9830251a261e42(sender_id, message, data, service_data_bot_need, carousel_id):
     #Подтвердить общая (функция программного выбора)
-    print("thread:" + GetCurrentThread() + " stack: proc_function01a9eda608194126be9830251a261e42")
+    print("thread:" + GetCurrentThread() + "stack: proc_function01a9eda608194126be9830251a261e42")
     rating = data.get('rating')
     comment = data.get('comment')
     is_error, text, state = RequestItilium({"data": {"action": "is_confirm_incident","rating":rating, "comment":comment, "incident":carousel_id,"sender": sender_id}})
@@ -1641,7 +1641,7 @@ def proc_function01a9eda608194126be9830251a261e42(sender_id, message, data, serv
 
 def proc3ec26f31a5dd4ff7a95fc7c612cf273a(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отклонить (выбор по результатам ввода с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc3ec26f31a5dd4ff7a95fc7c612cf273a")
+    print("thread:" + GetCurrentThread() + "stack: proc3ec26f31a5dd4ff7a95fc7c612cf273a")
     if GetIdStateForClearData() == "3ec26f31-a5dd-4ff7-a95f-c7c612cf273a":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1662,7 +1662,7 @@ def proc3ec26f31a5dd4ff7a95fc7c612cf273a(sender_id, message, data, service_data_
 
 def proc_function_expect_user3ec26f31a5dd4ff7a95fc7c612cf273a(sender_id, message, data, service_data_bot_need, carousel_id):
     # Выбор по результатам ввода с клавиатуры. Обработка ввота пользователя
-    print("thread:" + GetCurrentThread() + " stack: proc_function_expect_user3ec26f31a5dd4ff7a95fc7c612cf273a")
+    print("thread:" + GetCurrentThread() + "stack: proc_function_expect_user3ec26f31a5dd4ff7a95fc7c612cf273a")
     if not isinstance(data, dict):
         data = {}
     text = GetTextCommand(message)
@@ -1679,7 +1679,7 @@ def proc_function_expect_user3ec26f31a5dd4ff7a95fc7c612cf273a(sender_id, message
 
 def proc_function3ec26f31a5dd4ff7a95fc7c612cf273a(sender_id, text, data, carousel_id):
     #Отклонить (функция обработки выбора с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc_function3ec26f31a5dd4ff7a95fc7c612cf273a")
+    print("thread:" + GetCurrentThread() + "stack: proc_function3ec26f31a5dd4ff7a95fc7c612cf273a")
     is_error, text, state = RequestItilium({"data": {"action": "is_decline_incident", "incident":carousel_id,"comment":text, "sender": sender_id}})
     if is_error:
         text_error = text
@@ -1695,7 +1695,7 @@ def proc_function3ec26f31a5dd4ff7a95fc7c612cf273a(sender_id, text, data, carouse
 
 def proc3acf9e3b54a5487191e24a5de6948277(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отклонено успешно
-    print("thread:" + GetCurrentThread() + " stack: proc3acf9e3b54a5487191e24a5de6948277")
+    print("thread:" + GetCurrentThread() + "stack: proc3acf9e3b54a5487191e24a5de6948277")
     if GetIdStateForClearData() == "3acf9e3b-54a5-4871-91e2-4a5de6948277":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1706,7 +1706,7 @@ def proc3acf9e3b54a5487191e24a5de6948277(sender_id, message, data, service_data_
 
 def proccfbbb503f7b94287b6219ec07cbe0afa(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отмена
-    print("thread:" + GetCurrentThread() + " stack: proccfbbb503f7b94287b6219ec07cbe0afa")
+    print("thread:" + GetCurrentThread() + "stack: proccfbbb503f7b94287b6219ec07cbe0afa")
     if GetIdStateForClearData() == "cfbbb503-f7b9-4287-b621-9ec07cbe0afa":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1717,7 +1717,7 @@ def proccfbbb503f7b94287b6219ec07cbe0afa(sender_id, message, data, service_data_
 
 def proc42747c5ab75649b0b830bcf82d3dca9c(sender_id, message, data, service_data_bot_need, carousel_id):
     #Назад
-    print("thread:" + GetCurrentThread() + " stack: proc42747c5ab75649b0b830bcf82d3dca9c")
+    print("thread:" + GetCurrentThread() + "stack: proc42747c5ab75649b0b830bcf82d3dca9c")
     if GetIdStateForClearData() == "42747c5a-b756-49b0-b830-bcf82d3dca9c":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1727,7 +1727,7 @@ def proc42747c5ab75649b0b830bcf82d3dca9c(sender_id, message, data, service_data_
 
 def procdbb86b04001b4aa587bd0598114130e3(sender_id, message, data, service_data_bot_need, carousel_id):
     #Вывод элемента карусели
-    print("thread:" + GetCurrentThread() + " stack: procdbb86b04001b4aa587bd0598114130e3")
+    print("thread:" + GetCurrentThread() + "stack: procdbb86b04001b4aa587bd0598114130e3")
     if GetIdStateForClearData() == "dbb86b04-001b-4aa5-87bd-0598114130e3":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1740,7 +1740,7 @@ def procdbb86b04001b4aa587bd0598114130e3(sender_id, message, data, service_data_
 
 def proc_get_user_detail_view_by_iddbb86b04001b4aa587bd0598114130e3(sender_id, carousel_id, data):
     #Вывод элемента карусели (функция получения детального представления выбранного элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proc_get_user_detail_view_by_iddbb86b04001b4aa587bd0598114130e3")
+    print("thread:" + GetCurrentThread() + "stack: proc_get_user_detail_view_by_iddbb86b04001b4aa587bd0598114130e3")
     for id, detail_view in data.get('list_open_incidents'):
         if id == carousel_id:
             return detail_view
@@ -1748,7 +1748,7 @@ def proc_get_user_detail_view_by_iddbb86b04001b4aa587bd0598114130e3(sender_id, c
 
 def proc7e43a7686c964691abb16ccf4e47e119(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отмена
-    print("thread:" + GetCurrentThread() + " stack: proc7e43a7686c964691abb16ccf4e47e119")
+    print("thread:" + GetCurrentThread() + "stack: proc7e43a7686c964691abb16ccf4e47e119")
     if GetIdStateForClearData() == "7e43a768-6c96-4691-abb1-6ccf4e47e119":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1759,7 +1759,7 @@ def proc7e43a7686c964691abb16ccf4e47e119(sender_id, message, data, service_data_
 
 def procf5a27e7984da4e5681a8058f67b03c1f(sender_id, message, data, service_data_bot_need, carousel_id):
     #Обращение подтверждено
-    print("thread:" + GetCurrentThread() + " stack: procf5a27e7984da4e5681a8058f67b03c1f")
+    print("thread:" + GetCurrentThread() + "stack: procf5a27e7984da4e5681a8058f67b03c1f")
     if GetIdStateForClearData() == "f5a27e79-84da-4e56-81a8-058f67b03c1f":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1770,7 +1770,7 @@ def procf5a27e7984da4e5681a8058f67b03c1f(sender_id, message, data, service_data_
 
 def procffaaa8bf92394b6c9ff547b87743d7df(sender_id, message, data, service_data_bot_need, carousel_id):
     #Обращение отклонено
-    print("thread:" + GetCurrentThread() + " stack: procffaaa8bf92394b6c9ff547b87743d7df")
+    print("thread:" + GetCurrentThread() + "stack: procffaaa8bf92394b6c9ff547b87743d7df")
     if GetIdStateForClearData() == "ffaaa8bf-9239-4b6c-9ff5-47b87743d7df":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1781,7 +1781,7 @@ def procffaaa8bf92394b6c9ff547b87743d7df(sender_id, message, data, service_data_
 
 def procff766d22eecd4b8a9509ad556751429f(sender_id, message, data, service_data_bot_need, carousel_id):
     #Нет обращений
-    print("thread:" + GetCurrentThread() + " stack: procff766d22eecd4b8a9509ad556751429f")
+    print("thread:" + GetCurrentThread() + "stack: procff766d22eecd4b8a9509ad556751429f")
     if GetIdStateForClearData() == "ff766d22-eecd-4b8a-9509-ad556751429f":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1792,7 +1792,7 @@ def procff766d22eecd4b8a9509ad556751429f(sender_id, message, data, service_data_
 
 def proccdab1713d317452bbbdb8a484d513051(sender_id, message, data, service_data_bot_need, carousel_id):
     #Последние сообщения (Карусель)
-    print("thread:" + GetCurrentThread() + " stack: proccdab1713d317452bbbdb8a484d513051")
+    print("thread:" + GetCurrentThread() + "stack: proccdab1713d317452bbbdb8a484d513051")
     if GetIdStateForClearData() == "cdab1713-d317-452b-bbdb-8a484d513051":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1825,7 +1825,7 @@ def proccdab1713d317452bbbdb8a484d513051(sender_id, message, data, service_data_
 
 def proc_get_list_cortegescdab1713d317452bbbdb8a484d513051(sender_id, data, carousel_id):
     #Последние сообщения (получение списка кортежей)
-    print("thread:" + GetCurrentThread() + " stack: proc_get_list_cortegescdab1713d317452bbbdb8a484d513051")
+    print("thread:" + GetCurrentThread() + "stack: proc_get_list_cortegescdab1713d317452bbbdb8a484d513051")
     is_error, text, state = RequestItilium({"data": {"action": "is_get_last_conversations","sender": sender_id}})
     if is_error:
         text_error = text
@@ -1853,7 +1853,7 @@ def proc_get_list_cortegescdab1713d317452bbbdb8a484d513051(sender_id, data, caro
 
 def proc_expect_comand_usercdab1713d317452bbbdb8a484d513051(sender_id, message, data, service_data_bot_need, carousel_id):
     #Последние сообщения (обработчик выбора пользователя из карусели или команды под ней)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_comand_usercdab1713d317452bbbdb8a484d513051")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_comand_usercdab1713d317452bbbdb8a484d513051")
     id = GetTextCommand(message)
     if id == "cancel":
         proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id) #Выбор действия(команда "Отменить")
@@ -1881,7 +1881,7 @@ def proc_expect_comand_usercdab1713d317452bbbdb8a484d513051(sender_id, message, 
 
 def proc9e625d3af5e246b2b30e56242d8be3e5(sender_id, message, data, service_data_bot_need, carousel_id):
     #Обработчик вывода
-    print("thread:" + GetCurrentThread() + " stack: proc9e625d3af5e246b2b30e56242d8be3e5")
+    print("thread:" + GetCurrentThread() + "stack: proc9e625d3af5e246b2b30e56242d8be3e5")
     if GetIdStateForClearData() == "9e625d3a-f5e2-46b2-b30e-56242d8be3e5":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1893,7 +1893,7 @@ def proc9e625d3af5e246b2b30e56242d8be3e5(sender_id, message, data, service_data_
 
 def proc_get_user_detail_view_by_id9e625d3af5e246b2b30e56242d8be3e5(sender_id, carousel_id, data):
     #Обработчик вывода (функция получения детального представления выбранного элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proc_get_user_detail_view_by_id9e625d3af5e246b2b30e56242d8be3e5")
+    print("thread:" + GetCurrentThread() + "stack: proc_get_user_detail_view_by_id9e625d3af5e246b2b30e56242d8be3e5")
     for id, detail_view in data.get('list_open_incidents_full'):
         if id == carousel_id:
             return detail_view
@@ -1901,7 +1901,7 @@ def proc_get_user_detail_view_by_id9e625d3af5e246b2b30e56242d8be3e5(sender_id, c
 
 def proc6263c108cd6443a2b3678ab97a445fc7(sender_id, message, data, service_data_bot_need, carousel_id):
     #Команды элемента (команды элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proc6263c108cd6443a2b3678ab97a445fc7")
+    print("thread:" + GetCurrentThread() + "stack: proc6263c108cd6443a2b3678ab97a445fc7")
     if GetIdStateForClearData() == "6263c108-cd64-43a2-b367-8ab97a445fc7":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1930,7 +1930,7 @@ def proc6263c108cd6443a2b3678ab97a445fc7(sender_id, message, data, service_data_
 
 def proc_expect_user_button_click6263c108cd6443a2b3678ab97a445fc7(sender_id, message, data, service_data_bot_need, carousel_id):
     #Команды элемента (Обработчик выбора из подчиненных команд элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_user_button_click6263c108cd6443a2b3678ab97a445fc7")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_user_button_click6263c108cd6443a2b3678ab97a445fc7")
     command = GetTextCommand(message)
     if command == "f7dc6d45-6b09-4b7c-8dff-0942edf2acb5":
         procf7dc6d456b094b7c8dff0942edf2acb5(sender_id, message, data, service_data_bot_need, carousel_id) #Новое сообщение
@@ -1941,7 +1941,7 @@ def proc_expect_user_button_click6263c108cd6443a2b3678ab97a445fc7(sender_id, mes
 
 def procf7dc6d456b094b7c8dff0942edf2acb5(sender_id, message, data, service_data_bot_need, carousel_id):
     #Новое сообщение (выбор по результатам ввода с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: procf7dc6d456b094b7c8dff0942edf2acb5")
+    print("thread:" + GetCurrentThread() + "stack: procf7dc6d456b094b7c8dff0942edf2acb5")
     if GetIdStateForClearData() == "f7dc6d45-6b09-4b7c-8dff-0942edf2acb5":
         service_data_bot_need = {}
         carousel_id = ''
@@ -1961,7 +1961,7 @@ def procf7dc6d456b094b7c8dff0942edf2acb5(sender_id, message, data, service_data_
 
 def proc_function_expect_userf7dc6d456b094b7c8dff0942edf2acb5(sender_id, message, data, service_data_bot_need, carousel_id):
     # Выбор по результатам ввода с клавиатуры. Обработка ввота пользователя
-    print("thread:" + GetCurrentThread() + " stack: proc_function_expect_userf7dc6d456b094b7c8dff0942edf2acb5")
+    print("thread:" + GetCurrentThread() + "stack: proc_function_expect_userf7dc6d456b094b7c8dff0942edf2acb5")
     if not isinstance(data, dict):
         data = {}
     text = GetTextCommand(message)
@@ -1978,7 +1978,7 @@ def proc_function_expect_userf7dc6d456b094b7c8dff0942edf2acb5(sender_id, message
 
 def proc_functionf7dc6d456b094b7c8dff0942edf2acb5(sender_id, text, data, carousel_id):
     #Новое сообщение (функция обработки выбора с клавиатуры)
-    print("thread:" + GetCurrentThread() + " stack: proc_functionf7dc6d456b094b7c8dff0942edf2acb5")
+    print("thread:" + GetCurrentThread() + "stack: proc_functionf7dc6d456b094b7c8dff0942edf2acb5")
     is_error, text, state = RequestItilium({"data": {"action": "is_add_converstaion","incident" : carousel_id,"text":text,"sender": sender_id}})
     if is_error:
         text_error = text
@@ -1994,7 +1994,7 @@ def proc_functionf7dc6d456b094b7c8dff0942edf2acb5(sender_id, text, data, carouse
 
 def proc11c2842261c54d9f863ba2457b97e4ae(sender_id, message, data, service_data_bot_need, carousel_id):
     #Отмена
-    print("thread:" + GetCurrentThread() + " stack: proc11c2842261c54d9f863ba2457b97e4ae")
+    print("thread:" + GetCurrentThread() + "stack: proc11c2842261c54d9f863ba2457b97e4ae")
     if GetIdStateForClearData() == "11c28422-61c5-4d9f-863b-a2457b97e4ae":
         service_data_bot_need = {}
         carousel_id = ''
@@ -2004,7 +2004,7 @@ def proc11c2842261c54d9f863ba2457b97e4ae(sender_id, message, data, service_data_
 
 def proc3fb889f893ef403ebaaf6b4e49bb4dd8(sender_id, message, data, service_data_bot_need, carousel_id):
     #Сообщение добавлено
-    print("thread:" + GetCurrentThread() + " stack: proc3fb889f893ef403ebaaf6b4e49bb4dd8")
+    print("thread:" + GetCurrentThread() + "stack: proc3fb889f893ef403ebaaf6b4e49bb4dd8")
     if GetIdStateForClearData() == "3fb889f8-93ef-403e-baaf-6b4e49bb4dd8":
         service_data_bot_need = {}
         carousel_id = ''
@@ -2015,7 +2015,7 @@ def proc3fb889f893ef403ebaaf6b4e49bb4dd8(sender_id, message, data, service_data_
 
 def proc44188e7a8866457a8033cc9e23b1a1ff(sender_id, message, data, service_data_bot_need, carousel_id):
     #Сообщение не добавлено
-    print("thread:" + GetCurrentThread() + " stack: proc44188e7a8866457a8033cc9e23b1a1ff")
+    print("thread:" + GetCurrentThread() + "stack: proc44188e7a8866457a8033cc9e23b1a1ff")
     if GetIdStateForClearData() == "44188e7a-8866-457a-8033-cc9e23b1a1ff":
         service_data_bot_need = {}
         carousel_id = ''
@@ -2026,7 +2026,7 @@ def proc44188e7a8866457a8033cc9e23b1a1ff(sender_id, message, data, service_data_
 
 def procf6829c8beb464c618ab63bd31f6bc879(sender_id, message, data, service_data_bot_need, carousel_id):
     #Получить статус (Карусель)
-    print("thread:" + GetCurrentThread() + " stack: procf6829c8beb464c618ab63bd31f6bc879")
+    print("thread:" + GetCurrentThread() + "stack: procf6829c8beb464c618ab63bd31f6bc879")
     if GetIdStateForClearData() == "f6829c8b-eb46-4c61-8ab6-3bd31f6bc879":
         service_data_bot_need = {}
         carousel_id = ''
@@ -2053,11 +2053,13 @@ def procf6829c8beb464c618ab63bd31f6bc879(sender_id, message, data, service_data_
         proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id) #Выбор действия
     elif result_list == "error_in_itilium":
         proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id) #Выбор действия
+    elif result_list == "OK":
+        proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id) #Выбор действия
     return
 
 def proc_get_list_cortegesf6829c8beb464c618ab63bd31f6bc879(sender_id, data, carousel_id):
     #Получить статус (получение списка кортежей)
-    print("thread:" + GetCurrentThread() + " stack: proc_get_list_cortegesf6829c8beb464c618ab63bd31f6bc879")
+    print("thread:" + GetCurrentThread() + "stack: proc_get_list_cortegesf6829c8beb464c618ab63bd31f6bc879")
     is_error, text, state = RequestItilium({"data": {"action": "is_list_open_incidents","sender": sender_id}})
     if is_error:
         text_error = text
@@ -2069,6 +2071,9 @@ def proc_get_list_cortegesf6829c8beb464c618ab63bd31f6bc879(sender_id, data, caro
             list = json.loads(text)
             list_ret = []
             list_ret_full = []
+            if len(list) == 0:
+                ViberSendMessages(sender_id, TextMessage(text="У вас нет открытых обращений"))
+                return "OK"
             for incident in list:
                 list_ret.append((incident.get('id'),incident.get('view')))
                 list_ret_full.append((incident.get('id'),incident.get('detail_view')))
@@ -2082,7 +2087,7 @@ def proc_get_list_cortegesf6829c8beb464c618ab63bd31f6bc879(sender_id, data, caro
 
 def proc_expect_comand_userf6829c8beb464c618ab63bd31f6bc879(sender_id, message, data, service_data_bot_need, carousel_id):
     #Получить статус (обработчик выбора пользователя из карусели или команды под ней)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_comand_userf6829c8beb464c618ab63bd31f6bc879")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_comand_userf6829c8beb464c618ab63bd31f6bc879")
     id = GetTextCommand(message)
     if id == "cancel":
         proc095761bb67d8455bbf094e32d0e8dc4f(sender_id, message, data, service_data_bot_need, carousel_id) #Выбор действия(команда "Отменить")
@@ -2110,7 +2115,7 @@ def proc_expect_comand_userf6829c8beb464c618ab63bd31f6bc879(sender_id, message, 
 
 def procea557c1bbda64ec0a0c7ad3e4f493afc(sender_id, message, data, service_data_bot_need, carousel_id):
     #Вывод элемента карусели
-    print("thread:" + GetCurrentThread() + " stack: procea557c1bbda64ec0a0c7ad3e4f493afc")
+    print("thread:" + GetCurrentThread() + "stack: procea557c1bbda64ec0a0c7ad3e4f493afc")
     if GetIdStateForClearData() == "ea557c1b-bda6-4ec0-a0c7-ad3e4f493afc":
         service_data_bot_need = {}
         carousel_id = ''
@@ -2122,7 +2127,7 @@ def procea557c1bbda64ec0a0c7ad3e4f493afc(sender_id, message, data, service_data_
 
 def proc_get_user_detail_view_by_idea557c1bbda64ec0a0c7ad3e4f493afc(sender_id, carousel_id, data):
     #Вывод элемента карусели (функция получения детального представления выбранного элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proc_get_user_detail_view_by_idea557c1bbda64ec0a0c7ad3e4f493afc")
+    print("thread:" + GetCurrentThread() + "stack: proc_get_user_detail_view_by_idea557c1bbda64ec0a0c7ad3e4f493afc")
     for id, detail_view in data.get('list_open_incidents'):
         if id == carousel_id:
             return detail_view
@@ -2130,7 +2135,7 @@ def proc_get_user_detail_view_by_idea557c1bbda64ec0a0c7ad3e4f493afc(sender_id, c
 
 def proc17c11a9477c8493db93470bdbee77ffc(sender_id, message, data, service_data_bot_need, carousel_id):
     #Команды карусели (команды элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proc17c11a9477c8493db93470bdbee77ffc")
+    print("thread:" + GetCurrentThread() + "stack: proc17c11a9477c8493db93470bdbee77ffc")
     if GetIdStateForClearData() == "17c11a94-77c8-493d-b934-70bdbee77ffc":
         service_data_bot_need = {}
         carousel_id = ''
@@ -2154,7 +2159,7 @@ def proc17c11a9477c8493db93470bdbee77ffc(sender_id, message, data, service_data_
 
 def proc_expect_user_button_click17c11a9477c8493db93470bdbee77ffc(sender_id, message, data, service_data_bot_need, carousel_id):
     #Команды карусели (Обработчик выбора из подчиненных команд элемента карусели)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_user_button_click17c11a9477c8493db93470bdbee77ffc")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_user_button_click17c11a9477c8493db93470bdbee77ffc")
     command = GetTextCommand(message)
     if command == "542a39f9-c585-4d3c-a971-2192a781019f":
         proc542a39f9c5854d3ca9712192a781019f(sender_id, message, data, service_data_bot_need, carousel_id) #Закрыть
@@ -2163,7 +2168,7 @@ def proc_expect_user_button_click17c11a9477c8493db93470bdbee77ffc(sender_id, mes
 
 def proc542a39f9c5854d3ca9712192a781019f(sender_id, message, data, service_data_bot_need, carousel_id):
     #Закрыть
-    print("thread:" + GetCurrentThread() + " stack: proc542a39f9c5854d3ca9712192a781019f")
+    print("thread:" + GetCurrentThread() + "stack: proc542a39f9c5854d3ca9712192a781019f")
     if GetIdStateForClearData() == "542a39f9-c585-4d3c-a971-2192a781019f":
         service_data_bot_need = {}
         carousel_id = ''
@@ -2173,7 +2178,7 @@ def proc542a39f9c5854d3ca9712192a781019f(sender_id, message, data, service_data_
 
 def proc6cc30e06b21a4176892b507ee382b3e8(sender_id, message, data, service_data_bot_need, carousel_id):
     #Состояние ошибки при Приветствии (выбор из подчиненных команд)
-    print("thread:" + GetCurrentThread() + " stack: proc6cc30e06b21a4176892b507ee382b3e8")
+    print("thread:" + GetCurrentThread() + "stack: proc6cc30e06b21a4176892b507ee382b3e8")
     if GetIdStateForClearData() == "6cc30e06-b21a-4176-892b-507ee382b3e8":
         service_data_bot_need = {}
         carousel_id = ''
@@ -2198,7 +2203,7 @@ def proc6cc30e06b21a4176892b507ee382b3e8(sender_id, message, data, service_data_
 
 def proc_expect_user_button_click6cc30e06b21a4176892b507ee382b3e8(sender_id, message, data, service_data_bot_need, carousel_id):
     #Состояние ошибки при Приветствии (Обработчик выбора из подчиненных команд)
-    print("thread:" + GetCurrentThread() + " stack: proc_expect_user_button_click6cc30e06b21a4176892b507ee382b3e8")
+    print("thread:" + GetCurrentThread() + "stack: proc_expect_user_button_click6cc30e06b21a4176892b507ee382b3e8")
     command = GetTextCommand(message)
     if command == "5c625ad3-ac90-4009-97e7-d2e0b64d18c3":
         proc5c625ad3ac90400997e7d2e0b64d18c3(sender_id, message, data, service_data_bot_need, carousel_id) #да
@@ -2207,7 +2212,7 @@ def proc_expect_user_button_click6cc30e06b21a4176892b507ee382b3e8(sender_id, mes
 
 def proc5c625ad3ac90400997e7d2e0b64d18c3(sender_id, message, data, service_data_bot_need, carousel_id):
     #да
-    print("thread:" + GetCurrentThread() + " stack: proc5c625ad3ac90400997e7d2e0b64d18c3")
+    print("thread:" + GetCurrentThread() + "stack: proc5c625ad3ac90400997e7d2e0b64d18c3")
     if GetIdStateForClearData() == "5c625ad3-ac90-4009-97e7-d2e0b64d18c3":
         service_data_bot_need = {}
         carousel_id = ''
@@ -2299,11 +2304,11 @@ list_procs.update( { 'cc30e06-b21a-4176-892b-507ee382b3e86': proc_expect_user_bu
 list_procs.update( { '5c625ad3-ac90-4009-97e7-d2e0b64d18c3': proc5c625ad3ac90400997e7d2e0b64d18c3,'5c625ad3-ac90-4009-97e7-d2e0b64d18c3without_registration': False} )
 
 def GetIdFirstState():
-    print("thread:" + GetCurrentThread() + " stack: GetIdFirstState")
+    print("thread:" + GetCurrentThread() + "stack: GetIdFirstState")
     return "02957edd-8e98-4dd4-a0aa-530f15bba971"
 
 def SetFlagStopQuery(sender_id):
-    print("thread:" + GetCurrentThread() + " stack: SetFlagStopQuery")
+    print("thread:" + GetCurrentThread() + "stack: SetFlagStopQuery")
     try:
         DATABASE_URL = os.environ['DATABASE_URL']
         # Connect to an existing database
@@ -2313,22 +2318,22 @@ def SetFlagStopQuery(sender_id):
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_flags_user',))
         need_stop_check = False
         if(cur.rowcount == 0):
-            print("thread:" + GetCurrentThread() + " Первый запуск. Создание таблицы data_flags_user")
+            print("thread:" + GetCurrentThread() + "Первый запуск. Создание таблицы data_flags_user")
             # Execute a command: this creates a new table
             cur.execute("CREATE TABLE data_flags_user (id serial PRIMARY KEY, sender_id varchar(50), flag_id varchar(36) );")
             need_stop_check = True
 
         if need_stop_check:
-            print("thread:" + GetCurrentThread() + " Первый запуск. Не нужно ничего очищать")
+            print("thread:" + GetCurrentThread() + "Первый запуск. Не нужно ничего очищать")
             conn.commit()
             return True
         else:
             cur.execute("SELECT sender_id, flag_id FROM data_flags_user WHERE sender_id = %s FOR UPDATE", (sender_id,))
             if cur.rowcount > 0:
-                print("thread:" + GetCurrentThread() + " Есть данные о текущем пользователе. Снимем блокировку")
+                print("thread:" + GetCurrentThread() + "Есть данные о текущем пользователе. Снимем блокировку")
                 cur.execute("UPDATE data_flags_user SET flag_id = %s WHERE sender_id = %s", ("0",sender_id));
             else:
-                print("thread:" + GetCurrentThread() + " Нет данных о текущем пользователе. Нет блокировок для снятия.")
+                print("thread:" + GetCurrentThread() + "Нет данных о текущем пользователе. Нет блокировок для снятия.")
                 conn.commit()
                 return True
 
@@ -2337,14 +2342,14 @@ def SetFlagStopQuery(sender_id):
         return True
         # Close communication with the database
     except Exception as e:
-        print("thread:" + GetCurrentThread() + " Error on SetFlagStopQuery:" + e.args[0])
+        print("thread:" + GetCurrentThread() + "Error on SetFlagStopQuery:" + e.args[0])
         return False
     finally:
         cur.close()
         conn.close()
 
 def CreateCurrentUserRecord(sender_id, cur):
-    print("thread:" + GetCurrentThread() + " Создание записи о пользователе " + sender_id + " в таблице data_flags_user")
+    print("thread:" + GetCurrentThread() + "Создание записи о пользователе " + sender_id + " в таблице data_flags_user")
     #Заблокируем таблицу
     cur.execute("LOCK TABLE data_flags_user IN SHARE ROW EXCLUSIVE MODE")
     cur.execute("SELECT sender_id, flag_id FROM data_flags_user WHERE sender_id = %s FOR UPDATE", (sender_id,))
@@ -2353,10 +2358,10 @@ def CreateCurrentUserRecord(sender_id, cur):
         #Текущее время в миллисекундах
         millis = str(int(round(time.time() * 1000))) #Текущее время в миллисекундах
         cur.execute("INSERT INTO data_flags_user (sender_id, flag_id) VALUES (%s, %s)",(sender_id, millis))
-        print("thread:" + GetCurrentThread() + " Запись создана")
+        print("thread:" + GetCurrentThread() + "Запись создана")
         return True
     else:
-        print("thread:" + GetCurrentThread() + " Запись НЕ создана. Создана ранее другой транзакцией")
+        print("thread:" + GetCurrentThread() + "Запись НЕ создана. Создана ранее другой транзакцией")
         return False
 
 def SetFlagId(sender_id, flag_id, cur):
@@ -2376,14 +2381,14 @@ def SetFlagId(sender_id, flag_id, cur):
 def SetFlagIdNeed(not_need, sender_id, flag_id, cur ):
     if not_need:
         state = False
-        print("thread:" + GetCurrentThread() + " Не нужно пытаться установить блокировку")
+        print("thread:" + GetCurrentThread() + "Не нужно пытаться установить блокировку")
     else:
-        print("thread:" + GetCurrentThread() + " Попытаемся установить блокировку")
+        print("thread:" + GetCurrentThread() + "Попытаемся установить блокировку")
         state = SetFlagId(sender_id, flag_id, cur)
     return state
 
 def SetFlagStartQuery(sender_id, timestamp_message):
-    print("thread:" + GetCurrentThread() + " stack: SetFlagStartQuery")
+    print("thread:" + GetCurrentThread() + "stack: SetFlagStartQuery")
     try:
         DATABASE_URL = os.environ['DATABASE_URL']
         # Connect to an existing database
@@ -2399,19 +2404,19 @@ def SetFlagStartQuery(sender_id, timestamp_message):
         state = False
         flag_id = str(int(round(time.time() * 1000))) #Текущее время в миллисекундах
         if any_blocks_exist:
-            print("thread:" + GetCurrentThread() + " Таблица data_flags_user создана ранее")
+            print("thread:" + GetCurrentThread() + "Таблица data_flags_user создана ранее")
             cur.execute("SELECT sender_id, flag_id FROM data_flags_user WHERE sender_id = %s FOR UPDATE", (sender_id,))
             if cur.rowcount > 0:
-                print("thread:" + GetCurrentThread() + " Есть запись с пользователем " + sender_id)
+                print("thread:" + GetCurrentThread() + "Есть запись с пользователем " + sender_id)
                 state = SetFlagIdNeed(ExistNotDeliveredCommands(sender_id, timestamp_message),  sender_id, flag_id, cur )
             else:
-                print("thread:" + GetCurrentThread() + " Нет записи с пользователем " + sender_id)
+                print("thread:" + GetCurrentThread() + "Нет записи с пользователем " + sender_id)
                 if CreateCurrentUserRecord(sender_id, cur) :
                     state = True
                 else:
                     state = SetFlagIdNeed(ExistNotDeliveredCommands(sender_id, timestamp_message),  sender_id, flag_id, cur )
         else:
-            print("thread:" + GetCurrentThread() + " Первый вызов - создание таблицы data_flags_user")
+            print("thread:" + GetCurrentThread() + "Первый вызов - создание таблицы data_flags_user")
             if CreateCurrentUserRecord(sender_id, cur) :
                 state = True
             else:
@@ -2423,22 +2428,22 @@ def SetFlagStartQuery(sender_id, timestamp_message):
         return state
         # Close communication with the database
     except Exception as e:
-        print("thread:" + GetCurrentThread() + " Error on SetFlagStartQuery:" + e.args[0])
+        print("thread:" + GetCurrentThread() + "Error on SetFlagStartQuery:" + e.args[0])
         return True
     finally:
         cur.close()
         conn.close()
 
 def RequestItilium(dict_data):
-    print("thread:" + GetCurrentThread() + " stack: RequestItilium")
+    print("thread:" + GetCurrentThread() + "stack: RequestItilium")
     try:
        quote = "\""
        response = requests.post(address_api_itilium, data=json.dumps(dict_data).encode('utf-8'),
                             auth=(login_itilium, password_itilium))
        code = response.status_code
        description = response.text
-       print("thread:" + GetCurrentThread() + "   code: " + str(code))
-       print("thread:" + GetCurrentThread() + "   description: " + description)
+       print("thread:" + GetCurrentThread() + "  code: " + str(code))
+       print("thread:" + GetCurrentThread() + "  description: " + description)
        if (code == 200):
            return False, description, True
        else:
@@ -2447,42 +2452,43 @@ def RequestItilium(dict_data):
        return True, "Ошибка соединения с Итилиум. Обратитесь к администратору.", False
 
 def GetIdStateForClearData():
-    print("thread:" + GetCurrentThread() + " stack: GetIdStateForClearData")
+    print("thread:" + GetCurrentThread() + "stack: GetIdStateForClearData")
     return "095761bb-67d8-455b-bf09-4e32d0e8dc4f"
 
 def GoToStateFirst(sender_id, message, state_id, data, data_user, carousel_id):
-    print("thread:" + GetCurrentThread() + " stack: GoToStateFirst")
+    print("thread:" + GetCurrentThread() + "stack: GoToStateFirst")
     GoToStateByID(sender_id, message, state_id, data, data_user, carousel_id)
     return
 
 def GoToStateError(sender_id, message, state_id, data, data_user, carousel_id):
-    print("thread:" + GetCurrentThread() + " stack: GoToStateError")
+    print("thread:" + GetCurrentThread() + "stack: GoToStateError")
     GoToStateByID(sender_id, message, state_id, data, data_user, carousel_id)
     return
 
 def GoToStateByID(sender_id, message, state_id, service_data_bot_need, data_user, carousel_id):
-    print("thread:" + GetCurrentThread() + " stack: GoToStateByID")
+    print("thread:" + GetCurrentThread() + "stack: GoToStateByID")
     procedure = list_procs.get(state_id)
     if not isinstance(service_data_bot_need, dict):
         service_data_bot_need = {}
     if not isinstance(data_user, dict):
         data_user = {}
     procedure(sender_id, message, data_user, service_data_bot_need, carousel_id)
+
     return
 
 def GoToCurrentState(sender_id, message, is_registered_user):
-    print("thread:" + GetCurrentThread() + " stack: GoToCurrentState")
+    print("thread:" + GetCurrentThread() + "stack: GoToCurrentState")
     try:
         result_restore, is_error, state_id, data, data_user, carousel_id = RestoreState(sender_id)
         if result_restore:
             if is_registered_user == False:
                 if list_procs.get(state_id + 'without_registration') == True:
-                    print("thread:" + GetCurrentThread() + " stack: before GoToStateByID: " + state_id)
+                    print("thread:" + GetCurrentThread() + "stack: before GoToStateByID: " + state_id)
                     GoToStateByID(sender_id, message, state_id, data, data_user, carousel_id)
                 else:
                     GoToStateFirst(sender_id, message, GetIdFirstState(), data, data_user, carousel_id)
             else:
-                print("thread:" + GetCurrentThread() + " stack: before GoToStateByID: " + state_id)
+                print("thread:" + GetCurrentThread() + "stack: before GoToStateByID: " + state_id)
                 GoToStateByID(sender_id, message, state_id, data, data_user, carousel_id)
         else:
             if is_error:
@@ -2491,13 +2497,13 @@ def GoToCurrentState(sender_id, message, is_registered_user):
             else:
                 GoToStateFirst(sender_id, message, GetIdFirstState(), data, data_user, carousel_id)
     except Exception as e:
-        print("thread:" + GetCurrentThread() + " Ошибка при GoToCurrentState: " + e.args[0])
+        print("thread:" + GetCurrentThread() + "Ошибка при GoToCurrentState: " + e.args[0])
         ViberSendMessages(sender_id, TextMessage(text="ERROR RESTORE STATE"))
         GoToStateError(sender_id, message, GetIdErrorState(), {}, {}, "")
     return
 
 def SetHooksIfNeed():
-    print("thread:" + GetCurrentThread() + " stack: SetHooksIfNeed")
+    print("thread:" + GetCurrentThread() + "stack: SetHooksIfNeed")
     need_hook = False
     try:
         need_drop = False
@@ -2555,7 +2561,7 @@ viber = Api(BotConfiguration(
 
 @app.route('/clearBlocks',  methods=['GET'])
 def IncomingGetClear():
-    print("thread:" + GetCurrentThread() + " stack: IncomingGetClear")
+    print("thread:" + GetCurrentThread() + "stack: IncomingGetClear")
     key = request.args.get("key")
     if(not key == os.environ['CLEAR_KEY']):
         return  "Неправильный ключ. Используйте запрос вида https://servername/clearBlocks?key=your_key_from_admin_panel"
@@ -2569,7 +2575,7 @@ def IncomingGetClear():
         cur = conn.cursor()
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_flags_user',))
         if(cur.rowcount == 0):
-            print("thread:" + GetCurrentThread() + " Нет таблицы data_flags_user. Ее не очищаем")
+            print("thread:" + GetCurrentThread() + "Нет таблицы data_flags_user. Ее не очищаем")
             text += "Нет таблицы data_flags_user. Ее не очищаем\n"
         else:
             cur.execute("TRUNCATE data_flags_user");
@@ -2577,7 +2583,7 @@ def IncomingGetClear():
 
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_undelivered_send_messages',))
         if(cur.rowcount == 0):
-            print("thread:" + GetCurrentThread() + " Нет таблицы data_undelivered_send_messages. Ее не очищаем")
+            print("thread:" + GetCurrentThread() + "Нет таблицы data_undelivered_send_messages. Ее не очищаем")
             text += "Нет таблицы data_undelivered_send_messages. Ее не очищаем\n"
         else:
             cur.execute("TRUNCATE data_undelivered_send_messages");
@@ -2585,7 +2591,7 @@ def IncomingGetClear():
 
         cur.execute("select * from information_schema.tables where table_name=%s", ('data_undelivered_messages_time_stamp',))
         if(cur.rowcount == 0):
-            print("thread:" + GetCurrentThread() + " Нет таблицы data_undelivered_messages_time_stamp. Ее не очищаем")
+            print("thread:" + GetCurrentThread() + "Нет таблицы data_undelivered_messages_time_stamp. Ее не очищаем")
             text += "Нет таблицы data_undelivered_messages_time_stamp. Ее не очищаем<br>"
         else:
             cur.execute("TRUNCATE data_undelivered_messages_time_stamp");
@@ -2596,7 +2602,7 @@ def IncomingGetClear():
         return text
         # Close communication with the database
     except Exception as e:
-        print("thread:" + GetCurrentThread() + " Error on SetFlagStopQuery:" + e.args[0])
+        print("thread:" + GetCurrentThread() + "Error on SetFlagStopQuery:" + e.args[0])
         text += "Error on SetFlagStopQuery:" + e.args[0]
         return text
     finally:
@@ -2624,8 +2630,8 @@ def incoming():
     viber_request = viber.parse_request(request.get_data())
 
     if isinstance(viber_request, ViberMessageRequest):
-        print("thread:" + GetCurrentThread() + " Новое сообщение от пользователя " + str(viber_request.timestamp) + " " + str(viber_request.message))
-        print("thread:" + GetCurrentThread() + " viber_request.timestamp:" + str(viber_request.timestamp))
+        print("thread:" + GetCurrentThread() + "Новое сообщение от пользователя " + str(viber_request.timestamp) + " " + str(viber_request.message))
+        print("thread:" + GetCurrentThread() + "viber_request.timestamp:" + str(viber_request.timestamp))
         sender_id = viber_request.sender.id
         message = viber_request.message
 
@@ -2641,18 +2647,18 @@ def incoming():
                 print("thread:" + GetCurrentThread() + " FINALLY. SetFlagStopQuery")
                 SetFlagStopQuery(sender_id)
         else:
-            print("thread:" + GetCurrentThread() + " Ничего не делаем. Причина выше в логах")
+            print("thread:" + GetCurrentThread() + "Ничего не делаем. Причина выше в логах")
             return Response(status=200)
 
     elif isinstance(viber_request, ViberSubscribedRequest):
         ViberSendMessages(viber_request.sender.id, TextMessage(text="Вы зарегистрированы"))
     elif isinstance(viber_request, ViberFailedRequest):
         onFailedDeliveredMessage(viber_request._message_token, viber_request._user_id)
-        print("thread:" + GetCurrentThread() + " НЕ Доставлено " + str(viber_request._message_token))
+        print("thread:" + GetCurrentThread() + "НЕ Доставлено " + str(viber_request._message_token))
     elif isinstance(viber_request, ViberDeliveredRequest):
         onDeliveredMessage(viber_request._message_token, viber_request._user_id, viber_request.timestamp)
-        print("thread:" + GetCurrentThread() + " Доставлено " + str(viber_request._message_token))
-        print("thread:" + GetCurrentThread() + " Доставлено viber_request.timestamp:" + str(viber_request.timestamp))
+        print("thread:" + GetCurrentThread() + "Доставлено " + str(viber_request._message_token))
+        print("thread:" + GetCurrentThread() + "Доставлено viber_request.timestamp:" + str(viber_request.timestamp))
     elif isinstance(viber_request, ViberConversationStartedRequest) :
         ViberSendMessages(viber_request.sender.id, [TextMessage(text="Добрый день. Вы подписались на бота Итилиум")])
 
